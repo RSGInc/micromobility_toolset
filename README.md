@@ -15,25 +15,23 @@ This repository contains the software and input test data required to run the AM
    ```
 
 ### Outputs
+
+Running the model in "incremental demand" mode will generate network level-of-serivce matrices (skims) and incremental demand matrices.  Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones:
+- **auto_skim** - i, j, time, dist
+- **bike_skim** - i, j, value
+- **walk_skim** - i, j, value
+
 Running the model in "benefits" mode will generate the following three tables of outputs:
 - **chg_emissions** - i, j, CO2
 - **chg_trips** - i, j, da, s2, s3, wt, dt, wk, bk
 - **chg_vmt** - i, j, value
 - **user_ben** - i, j, minutes of user benefits
 
-Each table is indexed by origin and destination zone.
-
 ## Input test data
 The test database is available [here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf) and contains the following tables:
 
 ### project
 - **project_info** - key, value (name, creator, time, source project, etc.)
-
-### network level-of-serivce matrices (skims)
-Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones:
-- **auto_skim** - i, j, time, dist
-- **bike_skim** - i, j, value
-- **walk_skim** - i, j, value
 
 ### network
 The network is defined by the following tables:
@@ -99,7 +97,7 @@ The zones are defined by the following tables:
    - ycoord: zone point y coordinate
    
 ### demand
-Each table ndexed by an origin and destination column, and contains initial zone-to-zone demand by mode. Modes are encoded as drive alone (da), shared ride 2 (s2), shared ride 3+ (sr3), walk transit (wt), drive transit (dt), walk (wk), bike (bk).
+Each table indexed by an origin and destination column, and contains initial zone-to-zone demand by mode. Modes are encoded as drive alone (da), shared ride 2 (s2), shared ride 3+ (sr3), walk transit (wt), drive transit (dt), walk (wk), bike (bk).
 - **hbw1trip** - home-based-work 1 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
 - **hbw2trip** - home-based-work 2 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
 - **hbw3trip** - home-based-work 3 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
@@ -117,5 +115,3 @@ Each table ndexed by an origin and destination column, and contains initial zone
 - **nwk2trip** - non-work 2 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
 - **nwk3trip** - non-work 3 rips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
 - **nwk4trip** - non-work 4 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
-
-
