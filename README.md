@@ -25,11 +25,11 @@ Each table is indexed by origin and destination zone.
 ## Input test data
 The test database is available [here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf) and contains the following tables:
 
-### skims
-Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones as a function of **time** and **distance**:
-- **auto_skim**
-- **bike_skim**
-- **walk_skim**
+### network level-of-serivce matrices (skims)
+Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones:
+- **auto_skim** - i, j, time, dist
+- **bike_skim** - i, j, value
+- **walk_skim** - i, j, value
 
 ### network
 The network is defined by the following tables:
@@ -59,6 +59,7 @@ The network is defined by the following tables:
    - z_coord: z coordinate
    
 ### zones
+The zones are defined by the following tables:
 - **taz**
    - taz: zone number
    - area: area
@@ -94,24 +95,24 @@ The network is defined by the following tables:
    - ycoord: zone point y coordinate
    
 ### demand
-Each table ndexed by an origin and destination column, and contains initial zone-to-zone demand by mode. Modes are encoded as the following two-character strings: "da", "s2", "s3", "wt", "dt", "wk", "bk".
-- **hbw1trip**
-- **hbw2trip**       
-- **hbw3trip**       
-- **hbw4trip**       
-- **hscl1trip**      
-- **hscl2trip**      
-- **hscl3trip**
-- **hscl4trip**      
-- **hunv1trip**      
-- **hunv2trip**      
-- **hunv3trip**      
-- **hunv4trip**
-- **nhbtrip**       
-- **nwk1trip**      
-- **nwk2trip**      
-- **nwk3trip**
-- **nwk4trip**
+Each table ndexed by an origin and destination column, and contains initial zone-to-zone demand by mode. Modes are encoded as drive alone (da), shared ride 2 (s2), shared ride 3+ (sr3), walk transit (wt), drive transit (dt), walk (wk), bike (bk).
+- **hbw1trip** - home-based-work 1 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **hbw2trip** - home-based-work 2 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **hbw3trip** - home-based-work 3 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **hbw4trip** - home-based-work 4 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **hscl1trip** - home-based-school 1 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **hscl2trip** - home-based-school 2 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **hscl3trip** - home-based-school 3 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **hscl4trip** - home-based-school 4 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk   
+- **hunv1trip** - home-based-univ 1 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk     
+- **hunv2trip** - home-based-univ 2 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **hunv3trip** - home-based-univ 3 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **hunv4trip** - home-based-univ 4 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **nhbtrip** - non-home-based trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **nwk1trip** - non-work 1 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **nwk2trip** - non-work 2 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **nwk3trip** - non-work 3 rips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+- **nwk4trip** - non-work 4 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
 
 ### misc:
 - **project_info** - project/scenario info
