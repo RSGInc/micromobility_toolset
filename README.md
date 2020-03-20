@@ -1,10 +1,10 @@
 # AMBAG Bike Model
 This repository contains all of the code (and links to external data) required to run the bike demand model developed by RSG for AMBAG. 
 
-# Test SQLite DB
+## Test SQLite DB
 The test db is available [here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf). It contains the following tables:
 
-## skims
+### skims
 The test db contains the following tables of skims:
 - **auto_skim**       
 - **bike_skim**
@@ -12,7 +12,7 @@ The test db contains the following tables of skims:
 
 Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones as a function of **time** and **distance**.
 
-## network
+### network
 The network is defined by the following tables:
 - **link**:
    - link_type: TWO LANE, MULTILANE, RAMP, FREEWAY, BIKE, PATH, CENTROID C, SHUTTLE
@@ -39,7 +39,7 @@ The network is defined by the following tables:
    - y_coord
    - z_coord
    
-## zones
+### zones
 - **taz**
    - taz       
    - area      
@@ -74,7 +74,7 @@ The network is defined by the following tables:
    - xcoord 
    - ycoord 
    
-## Demand
+### Demand
 The test db contains the following tables of trips (demand):
 - **hbw1trip**
 - **hbw2trip**       
@@ -96,7 +96,7 @@ The test db contains the following tables of trips (demand):
 
 Each table ndexed by an origin and destination column, and contains initial zone-to-zone demand by mode. Modes are encoded as the following two-character strings: "da", "s2", "s3", "wt", "dt", "wk", "bk".
  
-## Outputs
+### Outputs
 Running the model in "benefits" mode will generate the following three tables of outputs:
 - **chg_emissions**     
 - **chg_trips**         
@@ -104,7 +104,7 @@ Running the model in "benefits" mode will generate the following three tables of
 
 Each table is indexed by origin and destination zone.
 
-## Misc:
+### Misc:
 - **project_info**
 - **user_ben**  
 
