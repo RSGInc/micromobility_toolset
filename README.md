@@ -9,6 +9,7 @@ The test db contains the following tables of skims:
 - **auto_skim**       
 - **bike_skim**
 - **walk_skim**
+
 Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones as a function of **time** and **distance**.
 
 ## network
@@ -92,6 +93,7 @@ The test db contains the following tables of trips (demand):
 - **nwk2trip**      
 - **nwk3trip**
 - **nwk4trip**
+
 Each table ndexed by an origin and destination column, and contains initial zone-to-zone demand by mode. Modes are encoded as the following two-character strings: "da", "s2", "s3", "wt", "dt", "wk", "bk".
  
 ## Outputs
@@ -99,6 +101,7 @@ Running the model in "benefits" mode will generate the following three tables of
 - **chg_emissions**     
 - **chg_trips**         
 - **chg_vmt**
+
 Each table is indexed by origin and destination zone.
 
 ## Misc:
