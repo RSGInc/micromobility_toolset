@@ -16,14 +16,18 @@ This repository contains the software and input test data required to run the AM
 
 ### Outputs
 Running the model in "benefits" mode will generate the following three tables of outputs:
-- **chg_emissions**     
-- **chg_trips**         
-- **chg_vmt**
+- **chg_emissions** - i, j, CO2
+- **chg_trips** - i, j, da, s2, s3, wt, dt, wk, bk
+- **chg_vmt** - i, j, value
+- **user_ben** - i, j, minutes of user benefits
 
 Each table is indexed by origin and destination zone.
 
 ## Input test data
 The test database is available [here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf) and contains the following tables:
+
+### project
+- **project_info** - key, value (name, creator, time, source project, etc.)
 
 ### network level-of-serivce matrices (skims)
 Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones:
@@ -114,7 +118,4 @@ Each table ndexed by an origin and destination column, and contains initial zone
 - **nwk3trip** - non-work 3 rips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
 - **nwk4trip** - non-work 4 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
 
-### misc:
-- **project_info** - project/scenario info
-- **user_ben** - project user benefits report
 
