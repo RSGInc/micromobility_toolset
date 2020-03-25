@@ -57,9 +57,9 @@ def read_taz_from_sqlite(config):
 			# if no more records we're done
 			break
 		else:
-			taz = row[row.keys().index(config.application_config.taz_taz_column)]
-			node = row[row.keys().index(config.application_config.taz_node_column)]
-			county = row[row.keys().index(config.application_config.taz_county_column)]
+			taz = row[list(row.keys()).index(config.application_config.taz_taz_column)]
+			node = row[list(row.keys()).index(config.application_config.taz_node_column)]
+			county = row[list(row.keys()).index(config.application_config.taz_county_column)]
 			result[taz] =  {'node': node, 'county': county}
 
 	return result
@@ -211,14 +211,14 @@ if __name__ == '__main__':
 		if resources.mode_choice_config.trip_tables[idx] != 'nhbtrip':
 			bike_trips = 0.5 * (bike_trips + numpy.transpose(bike_trips))
 
-		print ''
-		print ('segment '+resources.mode_choice_config.trip_tables[idx])
+		print('')
+		print(('segment '+resources.mode_choice_config.trip_tables[idx]))
 		print('non-intrazonal bike trips')
-		print int( numpy.sum( bike_trips * ( numpy.ones((nzones,nzones)) - numpy.diag(numpy.ones(nzones) ) ) ) )
+		print(int( numpy.sum( bike_trips * ( numpy.ones((nzones,nzones)) - numpy.diag(numpy.ones(nzones) ) ) ) ))
 
 		total_demand = total_demand + bike_trips
 
-	print ''
+	print('')
 	print('assigning trips...')
 	load_trip_matrix(base_net,total_demand,'bike_vol',taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike)
 

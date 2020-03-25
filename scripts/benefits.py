@@ -29,7 +29,7 @@ def benefits_main():
 	# ignore numpy divide by zero errors
 	numpy.seterr(divide='ignore',invalid='ignore')
 	
-	print ''
+	print('')
 	print('calculating vmt, emissions, and user benefits...')
 	
 	# loop over market segments
@@ -53,18 +53,18 @@ def benefits_main():
 	delta_minutes = auto_skim[:,:,0] * (delta_trips[:,:,0] + delta_trips[:,:,1] /2.0 + delta_trips[:,:,2] /resources.application_config.sr3_avg_occ)
 	delta_miles = auto_skim[:,:,1] * (delta_trips[:,:,0] + delta_trips[:,:,1] /2.0 + delta_trips[:,:,2] /resources.application_config.sr3_avg_occ)
 	
-	print ''	
-	print 'User benefits (min.): ', int(numpy.sum(user_ben))
-	print 'Change in bike trips: ', int(numpy.sum(delta_trips[:,:,6]))
-	print 'Change in VMT: ', int(numpy.sum(delta_miles))
+	print('')	
+	print('User benefits (min.): ', int(numpy.sum(user_ben)))
+	print('Change in bike trips: ', int(numpy.sum(delta_trips[:,:,6])))
+	print('Change in VMT: ', int(numpy.sum(delta_miles)))
 	
 	# calculate difference in pollutants
 	delta_pollutants = numpy.zeros((nzones,nzones,len(resources.application_config.pollutants)))
 	for idx in range(len(resources.application_config.pollutants)):
 		delta_pollutants[:,:,idx] = delta_miles * resources.application_config.grams_per_mile + delta_minutes * resources.application_config.grams_per_minute
-		print 'Change in g. ' + resources.application_config.pollutants[idx] + ': ', int(numpy.sum(delta_pollutants[:,:,idx]))
+		print('Change in g. ' + resources.application_config.pollutants[idx] + ': ', int(numpy.sum(delta_pollutants[:,:,idx])))
 
-	print ''
+	print('')
 	print('writing to disk...')
 	output.write_matrix_to_sqlite(user_ben,resources.application_config.build_sqlite_file,'user_ben',['minutes'])
 	output.write_matrix_to_sqlite(delta_trips,resources.application_config.build_sqlite_file,'chg_trips',resources.mode_choice_config.modes)

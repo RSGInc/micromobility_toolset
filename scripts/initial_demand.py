@@ -174,11 +174,11 @@ if __name__ == '__main__':
 		bike_trips = base_trips[:,:,6]
 		total_trips = motorized_trips + nonmotor_trips
 		
-		print ''
-		print ('segment '+resources.mode_choice_config.trip_tables[idx])
+		print('')
+		print(('segment '+resources.mode_choice_config.trip_tables[idx]))
 		print('initial trips')
 		print('total motorized walk bike')
-		print int(numpy.sum(total_trips)), int(numpy.sum(motorized_trips)), int(numpy.sum(walk_trips)), int(numpy.sum(bike_trips))
+		print(int(numpy.sum(total_trips)), int(numpy.sum(motorized_trips)), int(numpy.sum(walk_trips)), int(numpy.sum(bike_trips)))
 		
 		denom = numpy.exp(base_motor_util)  + numpy.exp(base_walk_util)+numpy.exp(base_bike_util)
 		build_motor_trips = total_trips * numpy.nan_to_num( numpy.exp(base_motor_util) / denom )
@@ -195,5 +195,5 @@ if __name__ == '__main__':
 		
 		print('final trips')
 		print('total motorized walk bike')
-		print int(numpy.sum(build_trips)), int(numpy.sum(build_motor_trips)), int(numpy.sum(build_walk_trips)), int(numpy.sum(build_bike_trips))
+		print(int(numpy.sum(build_trips)), int(numpy.sum(build_motor_trips)), int(numpy.sum(build_walk_trips)), int(numpy.sum(build_bike_trips)))
 

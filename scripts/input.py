@@ -22,9 +22,9 @@ def read_taz_from_sqlite(config):
 			# if no more records we're done
 			break
 		else:
-			taz = row[row.keys().index(config.application_config.taz_taz_column)]
-			node = row[row.keys().index(config.application_config.taz_node_column)]
-			county = row[row.keys().index(config.application_config.taz_county_column)]
+			taz = row[list(row.keys()).index(config.application_config.taz_taz_column)]
+			node = row[list(row.keys()).index(config.application_config.taz_node_column)]
+			county = row[list(row.keys()).index(config.application_config.taz_county_column)]
 			result[taz] =  {'node': node, 'county': county}
 
 	return result

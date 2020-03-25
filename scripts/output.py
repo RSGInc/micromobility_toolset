@@ -74,7 +74,7 @@ def create_estimation_dataset(net,choice_sets,output_config):
 		try:
 			path_sizes = net.get_path_sizes(choice_sets[trip_id],output_config.path_size_overlap_var)
 		except KeyError:
-			print ('excluding trip '+str(trip_id)+', a node is missing in network')
+			print(('excluding trip '+str(trip_id)+', a node is missing in network'))
 			continue
 		
 		for alt_idx in range(len(choice_sets[trip_id])):

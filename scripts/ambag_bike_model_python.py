@@ -21,4 +21,4 @@ if __name__ == '__main__':
 	else:
 		print(usage)
 		
-	print 'runtime: ', time.time() - t1
+	print('runtime: ', time.time() - t1)

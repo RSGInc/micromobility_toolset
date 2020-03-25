@@ -150,7 +150,7 @@ def get_coef_bounding_box(net,paths,config):
 	print( previous_box )
 	
 	while iter < maxiters:
-		print('Iteration: ' + str(iter) )
+		print(('Iteration: ' + str(iter) ))
 		terminate_flag = True
 		new_box = get_updated_coef_bounding_box(net,paths,previous_box,outer_box,tolerance)
 		print( new_box )

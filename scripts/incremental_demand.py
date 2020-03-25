@@ -193,7 +193,7 @@ def incremental_demand_main():
 	base_bike_skim = santa_clara_mask * base_walk_skim + (1-santa_clara_mask) * base_bike_skim
 	build_bike_skim = santa_clara_mask * build_walk_skim + (1-santa_clara_mask) * build_bike_skim
 	
-	print ''
+	print('')
 	print('performing model calculations...')
 	
 	# loop over market segments
@@ -236,11 +236,11 @@ def incremental_demand_main():
 		total_trips = motorized_trips + nonmotor_trips
 		
 		# log base trips to console
-		print ''
-		print ('segment '+resources.mode_choice_config.trip_tables[idx])
+		print('')
+		print(('segment '+resources.mode_choice_config.trip_tables[idx]))
 		print('base trips')
 		print('total motorized walk bike')
-		print int(numpy.sum(total_trips)), int(numpy.sum(motorized_trips)), int(numpy.sum(walk_trips)), int(numpy.sum(bike_trips))
+		print(int(numpy.sum(total_trips)), int(numpy.sum(motorized_trips)), int(numpy.sum(walk_trips)), int(numpy.sum(bike_trips)))
 		
 		# calculate logit denominator
 		denom = ( motorized_trips  + walk_trips * numpy.exp( build_walk_util - base_walk_util ) + bike_trips * numpy.exp( build_bike_util - base_bike_util ) )
@@ -263,7 +263,7 @@ def incremental_demand_main():
 		# log build trips to console
 		print('build trips')
 		print('total motorized walk bike')
-		print int(numpy.sum(build_trips)), int(numpy.sum(build_motor_trips)), int(numpy.sum(build_walk_trips)), int(numpy.sum(build_bike_trips))
+		print(int(numpy.sum(build_trips)), int(numpy.sum(build_motor_trips)), int(numpy.sum(build_walk_trips)), int(numpy.sum(build_bike_trips)))
 
 		# perform tracing if desired
 		if resources.application_config.trace == True and resources.application_config.trace_segment == resources.mode_choice_config.trip_tables[idx]:
@@ -271,51 +271,51 @@ def incremental_demand_main():
 			ptaz = resources.application_config.trace_ptaz
 			ataz = resources.application_config.trace_ataz
 			
-			print ''
-			print 'TRACE'
-			print 'ptaz: ', ptaz
-			print 'ataz: ', ataz
+			print('')
+			print('TRACE')
+			print('ptaz: ', ptaz)
+			print('ataz: ', ataz)
 			
-			print 'base pa'
+			print('base pa')
 			path = base_net.single_source_dijkstra(taz_nodes[ptaz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ataz])[1][taz_nodes[ataz]]
-			print 'path: ', path 
+			print('path: ', path) 
 			for var in resources.mode_choice_config.route_varcoef_bike:
-				print var, base_net.path_trace(path,var)
+				print(var, base_net.path_trace(path,var))
 	
-			print ''
-			print 'build pa'
+			print('')
+			print('build pa')
 			path = build_net.single_source_dijkstra(taz_nodes[ptaz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ataz])[1][taz_nodes[ataz]]
-			print 'path: ', path 
+			print('path: ', path) 
 			for var in resources.mode_choice_config.route_varcoef_bike:
-				print var, build_net.path_trace(path,var)
+				print(var, build_net.path_trace(path,var))
 	
-			print ''
-			print 'base ap'
+			print('')
+			print('base ap')
 			path = base_net.single_source_dijkstra(taz_nodes[ataz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ptaz])[1][taz_nodes[ptaz]]
-			print 'path: ', path 
+			print('path: ', path) 
 			for var in resources.mode_choice_config.route_varcoef_bike:
-				print var, base_net.path_trace(path,var)
+				print(var, base_net.path_trace(path,var))
 	
-			print ''
-			print 'build ap'
+			print('')
+			print('build ap')
 			path = build_net.single_source_dijkstra(taz_nodes[ataz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ptaz])[1][taz_nodes[ptaz]]
-			print 'path: ', path 
+			print('path: ', path) 
 			for var in resources.mode_choice_config.route_varcoef_bike:
-				print var, build_net.path_trace(path,var)
+				print(var, build_net.path_trace(path,var))
 			
-			print ''
-			print 'chg. bike util'
-			print build_bike_util[ataz-1][ptaz-1] - base_bike_util[ataz-1][ptaz-1]
+			print('')
+			print('chg. bike util')
+			print(build_bike_util[ataz-1][ptaz-1] - base_bike_util[ataz-1][ptaz-1])
 			
-			print ''
-			print 'base trips'
-			print 'da s2 s3 wt dt wk bk'
-			print base_trips[ptaz-1,ataz-1,0], base_trips[ptaz-1,ataz-1,1], base_trips[ptaz-1,ataz-1,2], base_trips[ptaz-1,ataz-1,3], base_trips[ptaz-1,ataz-1,4], base_trips[ptaz-1,ataz-1,5], base_trips[ptaz-1,ataz-1,6]
+			print('')
+			print('base trips')
+			print('da s2 s3 wt dt wk bk')
+			print(base_trips[ptaz-1,ataz-1,0], base_trips[ptaz-1,ataz-1,1], base_trips[ptaz-1,ataz-1,2], base_trips[ptaz-1,ataz-1,3], base_trips[ptaz-1,ataz-1,4], base_trips[ptaz-1,ataz-1,5], base_trips[ptaz-1,ataz-1,6])
 			
-			print ''
-			print 'build trips'
-			print 'da s2 s3 wt dt wk bk'
-			print build_trips[ptaz-1,ataz-1,0], build_trips[ptaz-1,ataz-1,1], build_trips[ptaz-1,ataz-1,2], build_trips[ptaz-1,ataz-1,3], build_trips[ptaz-1,ataz-1,4], build_trips[ptaz-1,ataz-1,5], build_trips[ptaz-1,ataz-1,6]
+			print('')
+			print('build trips')
+			print('da s2 s3 wt dt wk bk')
+			print(build_trips[ptaz-1,ataz-1,0], build_trips[ptaz-1,ataz-1,1], build_trips[ptaz-1,ataz-1,2], build_trips[ptaz-1,ataz-1,3], build_trips[ptaz-1,ataz-1,4], build_trips[ptaz-1,ataz-1,5], build_trips[ptaz-1,ataz-1,6])
 			
 
 if __name__ == '__main__':			
