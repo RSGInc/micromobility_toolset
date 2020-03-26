@@ -1,4 +1,10 @@
-import choice_set, network, config, output, csv, sqlite3, numpy, time, argparse
+import csv
+import sqlite3
+import numpy
+import time
+import argparse
+
+from . import (choice_set, network, config, output)
 
 def get_skim_matrix(net,taz_nodes,varcoef,max_cost=None):
 
@@ -168,7 +174,7 @@ def add_derived_network_attributes(net):
 			net.set_dual_attribute_value(edge1,edge2,'path_onoff', 1 * ( (path1 + path2) == 1 ) )
 
 
-if __name__ == '__main__':
+def assign_demand_main():
 
 	t1 = time.time()
 
@@ -231,3 +237,7 @@ if __name__ == '__main__':
 			writer.writerow([a,b,base_net.get_edge_attribute_value((a,b),'bike_vol')])
 
 	f.close()
+
+
+if __name__ == '__main__':
+	assign_demand_main()
