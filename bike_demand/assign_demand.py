@@ -228,7 +228,7 @@ def assign_demand_main():
 	print('assigning trips...')
 	load_trip_matrix(base_net,total_demand,'bike_vol',taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike)
 
-	f = open('bike_vol.csv','wb')
+	f = open('bike_vol.csv','w')
 	writer = csv.writer(f)
 
 	print('writing results...')
