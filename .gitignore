@@ -1,0 +1,12 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# macOS
+.DS_Store
+
+# notebook
+.ipynb_checkpoints/
+
+# sqlite files
+*.db
