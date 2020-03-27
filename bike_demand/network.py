@@ -11,13 +11,13 @@ class Network():
     def __init__(self, network_config, sqlite_file):
         """initialize network data structure, void"""
 
-        self.adjacency={}
-        self.nodes={}
-        self.dual={}
+        self.adjacency = {}
+        self.nodes = {}
+        self.dual = {}
 
-        self.adjacency_names=[]
-        self.node_names=[]
-        self.dual_names=[]
+        self.adjacency_names = []
+        self.node_names = []
+        self.dual_names  =[]
 
         self.node_x_name = None
         self.node_y_name = None
@@ -48,10 +48,10 @@ class Network():
         self.centroid_connector_name = network_config.centroid_connector_name
         for a in self.adjacency:
             for b in self.adjacency[a]:
-                if self.get_edge_attribute_value((a,b),network_config.centroid_connector_test[0]) == network_config.centroid_connector_test:
-                    self.set_edge_attribute_value((a,b),network_config.centroid_connector_name,True)
+                if self.get_edge_attribute_value((a, b), network_config.centroid_connector_test[0]) == network_config.centroid_connector_test:
+                    self.set_edge_attribute_value((a, b), network_config.centroid_connector_name, True)
                 else:
-                    self.set_edge_attribute_value((a,b),network_config.centroid_connector_name,False)
+                    self.set_edge_attribute_value((a, b), network_config.centroid_connector_name, False)
 
         self.create_dual()
 
@@ -97,11 +97,11 @@ class Network():
                 ab_attribute_values = []
                 ba_attribute_values = []
 
-                # loop over desired attribute names
-                for k in list(attributes_by_direction.keys()):
+                # loop over desired attribute values
+                for ab_val, ba_val in attributes_by_direction.values():
                     # get values for equivalent database column names
-                    ab_attribute_values.append( row[list(row.keys()).index(attributes_by_direction[k][0])] )
-                    ba_attribute_values.append( row[list(row.keys()).index(attributes_by_direction[k][1])] )
+                    ab_attribute_values.append(row[list(row.keys()).index(ab_val)])
+                    ba_attribute_values.append(row[list(row.keys()).index(ba_val)])
 
                 # get a node and b node
                 a = row[list(row.keys()).index(from_name)]
@@ -119,7 +119,7 @@ class Network():
                 self.adjacency[a][b] = ab_attribute_values
                 self.adjacency[b][a] = ba_attribute_values
 
-        # print(self.adjacency)
+        print(self.adjacency)
         # close database connection
         database_cursor.close()
         database_connection.close()

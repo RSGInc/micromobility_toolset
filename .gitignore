@@ -7,6 +7,3 @@ __pycache__/
 
 # notebook
 .ipynb_checkpoints/
-
-# sqlite files
-*.db

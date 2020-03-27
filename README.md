@@ -3,16 +3,18 @@ This repository contains the software and input test data required to run the AM
 
 ## How To
 1. Clone this repository.
-2. Download test SQLite database and copy it into this main directory of this repository.
-3. Navigate to the `scripts/` directory.
-4. Run the Python script to generate incremental demand:
+2. Run the Python script to generate incremental demand:
    ```
-   python ambag_bike_model_python.py --type incremental_demand --base ../new_path_coef.db --build ../new_path_coef.db
+   python ambag_bike_model_python.py --type incremental_demand --base ambag_example/data/example.db --build ambag_example/data/example.db
    ```
-5. Run the Python script to quantify benefits of the changes:
+3. Run the Python script to quantify benefits of the changes:
    ```
-   python ambag_bike_model_python.py --type benefits --base ../new_path_coef.db --build ../new_path_coef.db
+   python ambag_bike_model_python.py --type benefits --base ambag_example/data/example.db --build ambag_example/data/example.db
    ```
+3. Run the Python script to assign demand counts to the changes:
+  ```
+  python ambag_bike_model_python.py --type assign_demand --base ambag_example/data/example.db --build ambag_example/data/example.db
+  ```
 
 ### Outputs
 
@@ -28,7 +30,9 @@ Running the model in "benefits" mode will generate the following three tables of
 - **user_ben** - i, j, minutes of user benefits
 
 ## Input test data
-The test database is available [here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf) and contains the following tables:
+The full test database is available [here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf).
+
+The 25-zone example can be found in ``ambag_example/data/``. Both databases contain the following tables:
 
 ### project
 - **project_info** - key, value (name, creator, time, source project, etc.)
@@ -59,7 +63,7 @@ The network is defined by the following tables:
    - x_coord: x coordinate
    - y_coord: y coordinate
    - z_coord: z coordinate
-   
+
 ### zones
 The zones are defined by the following tables:
 - **taz**
@@ -80,7 +84,7 @@ The zones are defined by the following tables:
    - auto_1: households by auto class
    - auto_2: households by auto class
    - auto_3: households by auto class
-   - farm: farm employment 
+   - farm: farm employment
    - indu: industrial employment
    - cons: construction employment
    - retl: retail employment
@@ -95,7 +99,7 @@ The zones are defined by the following tables:
    - pointno: zone point id
    - xcoord: zone point x coordinate
    - ycoord: zone point y coordinate
-   
+
 ### demand
 Each table indexed by an origin and destination column, and contains initial zone-to-zone demand by mode. Modes are encoded as drive alone (da), shared ride 2 (s2), shared ride 3+ (sr3), walk transit (wt), drive transit (dt), walk (wk), bike (bk).
 - **hbw1trip** - home-based-work 1 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
