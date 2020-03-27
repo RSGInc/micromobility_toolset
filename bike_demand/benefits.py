@@ -70,12 +70,12 @@ def benefits_main():
 		delta_pollutants[:,:,idx] = delta_miles * resources.application_config.grams_per_mile + delta_minutes * resources.application_config.grams_per_minute
 		print('Change in g. ' + resources.application_config.pollutants[idx] + ': ', int(numpy.sum(delta_pollutants[:,:,idx])))
 
-	print('')
-	print('writing to disk...')
-	output.write_matrix_to_sqlite(user_ben,resources.application_config.build_sqlite_file,'user_ben',['minutes'])
-	output.write_matrix_to_sqlite(delta_trips,resources.application_config.build_sqlite_file,'chg_trips',resources.mode_choice_config.modes)
-	output.write_matrix_to_sqlite(delta_miles,resources.application_config.build_sqlite_file,'chg_vmt',['value'])
-	output.write_matrix_to_sqlite(delta_pollutants,resources.application_config.build_sqlite_file,'chg_emissions',resources.application_config.pollutants)
+	# print('')
+	# print('writing to disk...')
+	# output.write_matrix_to_sqlite(user_ben,resources.application_config.build_sqlite_file,'user_ben',['minutes'])
+	# output.write_matrix_to_sqlite(delta_trips,resources.application_config.build_sqlite_file,'chg_trips',resources.mode_choice_config.modes)
+	# output.write_matrix_to_sqlite(delta_miles,resources.application_config.build_sqlite_file,'chg_vmt',['value'])
+	# output.write_matrix_to_sqlite(delta_pollutants,resources.application_config.build_sqlite_file,'chg_emissions',resources.application_config.pollutants)
 
 if __name__ == '__main__':
 	benefits_main()
