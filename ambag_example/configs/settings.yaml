@@ -1,0 +1,26 @@
+models:
+  - incremental_demand
+  - benefits
+  - assign_demand
+
+
+# taz table name and column names
+taz_table_name: taz
+taz_taz_column: taz
+taz_node_column: node_id
+taz_county_column: co
+
+# number of zones
+num_zones: 1884
+
+# should tracing be performed in incremental logit, and for which zones and segment
+trace: False
+trace_ptaz: 1455
+trace_ataz: 1493
+trace_segment: nwk1trip
+
+# parameters for emissions estimation
+pollutants: CO2
+grams_per_mile: 311.0
+grams_per_minute: 79.0
+sr3_avg_occ: 3.25

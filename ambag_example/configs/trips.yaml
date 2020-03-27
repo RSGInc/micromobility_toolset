@@ -1,0 +1,133 @@
+trip_tables:
+    - hbw1trip
+    - hbw2trip
+    - hbw3trip
+    - hbw4trip
+    - hscl1trip
+    - hscl2trip
+    - hscl3trip
+    - hscl4trip
+    - hunv1trip
+    - hunv2trip
+    - hunv3trip
+    - hunv4trip
+    - nwk1trip
+    - nwk2trip
+    - nwk3trip
+    - nwk4trip
+    - nhbtrip
+
+# coefficients by market segment
+ivt_coef:
+    hbw1: -0.017
+    hbw2: -0.017
+    hbw3: -0.017
+    hbw4: -0.017
+    hscl1: -0.005
+    hscl2: -0.005
+    hscl3: -0.005
+    hscl4: -0.005
+    hunv1: -0.061
+    hunv2: -0.061
+    hunb3: -0.061
+    hunv4: -0.061
+    nwk1: -0.005
+    nwk2: -0.005
+    nwk3: -0.005
+    nwk4: -0.005
+    nhb: -0.013
+
+walk_skim_coef: -0.712
+bike_skim_coef: -0.182
+bike_dist_coef_santa_clara: -0.154
+
+# generalized cost coefficients for bike skimming
+route_varcoef_bike:
+    - d0: 0.858 # distance on ordinary streets, miles ( bike_class == 0 and lanes > 0 )
+    - d1: 0.387 # distance on bike paths ( bike_class == 1 )
+    - d2: 0.544 # distance on bike lanes ( bike_class == 2 )
+    - d3: 0.773 # distance on bike routes ( bike_class == 3 )
+    - dw: 3.449 # distance wrong way ( bike_class == 0 and lanes == 0 )
+    - riseft: 0.005 # elevation gain in feet
+    - turn: 0.094 # number of turns
+    - dne2art: 1.908 # additional penalty for distance on an arterial without bike lane ( fhwa_fc in [1,2,6,11,12,14,77] ) * ( bike_class != 2 )
+    - bike_exclude: 999.0 # bikes not allowed ( link_type in ['FREEWAY'] )
+    - thru_centroid: 999.0 # centroid to centroid traversal
+    - shuttle_ivt: 0.143 # shuttle in-vehicle minutes
+    - shuttle_wait: 0.216 # shuttle wait minutes
+
+# generalized cost coefficients for walk skimming
+route_varcoef_walk:
+    - distance: 1.0
+    - bike_exclude: 999.0
+    - thru_centroid: 999.0
+
+# modes in order of columns in sqlite database trip tables
+modes:
+    - da
+    - s2
+    - s3
+    - wt
+    - dt
+    - wk
+    - bk
+
+# maximum cost after which skimming is halted
+max_cost_bike: 15.0
+max_cost_walk: 10.0
+
+# ASCs and calibration adjustments
+walk_asc:
+    hbw1: -0.69
+    hbw2: 0.18
+    hbw3: -0.08
+    hbw4: 0.61
+    hscl1: 0.44
+    hscl2: -1.32
+    hscl3: 0.25
+    hscl4: 1.0
+    hunv1: -0.736
+    hunv2: -0.736
+    hunv3: -0.736
+    hunv4: -0.736
+    nwk1: 1.45
+    nwk2: 0.47
+    nwk3: 0.48
+    nwk4: 0.44
+    nhb: 0.58
+
+bike_asc:
+    hbw1: -3.38
+    hbw2: -2.51
+    hbw3: -2.75
+    hbw4: -2.08
+    hscl1: -2.93
+    hscl2: -4.69
+    hscl3: -3.11
+    hscl4: -2.37
+    hunv1: -2.79
+    hunv2: -2.79
+    hunv3: -2.79
+    hunv4: -2.79
+    nwk1: -2.2
+    nwk2: -2.21
+    nwk3: -2.05
+    nwk4: -2.06
+    nhb: -3.18
+
+# more coefficients
+walk_intrazonal: -0.613
+bike_intrazonal: -1.720
+walk_santa_clara: 0.378
+walk_santa_clara_intrazonal: -1.985
+bike_santa_clara: -0.982
+bike_santa_clara_intrazonal: 0.775
+
+# county code for Santa Clara in taz table
+santa_clara_county_code: 85
+
+# reduction of motorized utility for UCSC
+motorized_ucsc_attr: -0.0
+
+# taz of UCSC
+ucsc_taz: 34
