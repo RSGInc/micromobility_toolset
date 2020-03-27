@@ -158,19 +158,19 @@ def incremental_demand_main():
     # read base skims from disk or perform path searches
     if resources.application_config.read_base_skims_from_disk:
         print('reading base skims from disk...')
-        #walk skims not needed for incremental model
-        #base_walk_skim = read_matrix_from_sqlite(resources,'walk_skim',resources.application_config.base_sqlite_file)
+        # walk skims not needed for incremental model
+        # base_walk_skim = read_matrix_from_sqlite(resources,'walk_skim',resources.application_config.base_sqlite_file)
         base_bike_skim = read_matrix_from_sqlite(resources,'bike_skim',resources.application_config.base_sqlite_file)
     else:
         print('skimming base network...')
-        #walk skims not needed for incremental model
-        #base_walk_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_walk,resources.mode_choice_config.max_cost_walk) * ( numpy.ones((nzones,nzones)) - numpy.diag(numpy.ones(nzones)) )
+        # walk skims not needed for incremental model
+        # base_walk_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_walk,resources.mode_choice_config.max_cost_walk) * ( numpy.ones((nzones,nzones)) - numpy.diag(numpy.ones(nzones)) )
         base_bike_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((nzones,nzones)) - numpy.diag(numpy.ones(nzones)) )
 
-        print('writing results...')
-        #walk skims not needed for incremental model
-        #output.write_matrix_to_sqlite(base_walk_skim,resources.application_config.base_sqlite_file,'walk_skim',['value'])
-        output.write_matrix_to_sqlite(base_bike_skim,resources.application_config.base_sqlite_file,'bike_skim',['value'])
+        # print('writing results...')
+        # walk skims not needed for incremental model
+        # output.write_matrix_to_sqlite(base_walk_skim,resources.application_config.base_sqlite_file,'walk_skim',['value'])
+        # output.write_matrix_to_sqlite(base_bike_skim,resources.application_config.base_sqlite_file,'bike_skim',['value'])
 
     # read build skims from disk or perform path searches
     if resources.application_config.read_build_skims_from_disk:
@@ -180,8 +180,8 @@ def incremental_demand_main():
         print('skimming build network...')
         build_bike_skim = get_skim_matrix(build_net,taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((nzones,nzones)) - numpy.diag(numpy.ones(nzones)) )
 
-        print('writing results...')
-        output.write_matrix_to_sqlite(build_bike_skim,resources.application_config.build_sqlite_file,'bike_skim',['value'])
+        # print('writing results...')
+        # output.write_matrix_to_sqlite(build_bike_skim,resources.application_config.build_sqlite_file,'bike_skim',['value'])
 
     # fix build walk skims to zero, not needed for incremental model
     base_walk_skim = numpy.zeros((nzones,nzones))
@@ -208,7 +208,9 @@ def incremental_demand_main():
 
         # read base trip table into matrix
         base_trips = read_matrix_from_sqlite(resources,resources.mode_choice_config.trip_tables[idx],resources.application_config.base_sqlite_file)
-
+        if base_trips.size == 0:
+            print('%s is empty' % idx)
+            continue
         # calculate base walk and bike utilities
         base_bike_util = base_bike_skim * ( santa_clara_mask * resources.mode_choice_config.bike_dist_coef_santa_clara[idx] + (1 - santa_clara_mask) * resources.mode_choice_config.bike_skim_coef[idx])
         base_walk_util = base_walk_skim * resources.mode_choice_config.walk_skim_coef[idx]
@@ -265,7 +267,7 @@ def incremental_demand_main():
         build_trips[:,:,6] = build_bike_trips
 
         # write matrix to database
-        output.write_matrix_to_sqlite(build_trips,resources.application_config.build_sqlite_file,resources.mode_choice_config.trip_tables[idx],resources.mode_choice_config.modes)
+        # output.write_matrix_to_sqlite(build_trips,resources.application_config.build_sqlite_file,resources.mode_choice_config.trip_tables[idx],resources.mode_choice_config.modes)
 
         # log build trips to console
         print('build trips')
