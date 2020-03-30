@@ -103,8 +103,10 @@ def incremental_demand_main():
     parser.add_argument('--build',dest='build',action='store')
     parser.add_argument('--base_disk',help='read base skims from disk to speed up incremental demand',action='store_true')
     args = parser.parse_args()
-    resources.application_config.base_sqlite_file = args.base
-    resources.application_config.build_sqlite_file = args.build
+    if args.base:
+        resources.application_config.base_sqlite_file = args.base
+    if args.build:
+        resources.application_config.build_sqlite_file = args.build
 
     resources.application_config.read_base_skims_from_disk = args.base_disk
 

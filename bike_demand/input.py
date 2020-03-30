@@ -50,9 +50,9 @@ def read_matrix_from_sqlite(config,table_name,sqlite_file):
         return np.array([])
 
     if len(rows[0])>3:
-        dim = (config.application_config.num_zones+1,config.application_config.num_zones+1,len(rows[0])-2)
+        dim = (config.application_config.num_zones,config.application_config.num_zones,len(rows[0])-2)
     else:
-        dim = (config.application_config.num_zones+1,config.application_config.num_zones+1)
+        dim = (config.application_config.num_zones,config.application_config.num_zones)
 
     trip_matrix = np.zeros(dim)
 
@@ -71,6 +71,8 @@ def get_skim_matrix(net, taz_nodes, varcoef, max_cost=None):
     until max_cost is reached, return matrix
     """
 
+    # num_zones = len(taz_nodes)
+    # print(num_zones)
     max_taz = max(taz_nodes.keys())
     skim_matrix = np.zeros((max_taz+1, max_taz+1))
 

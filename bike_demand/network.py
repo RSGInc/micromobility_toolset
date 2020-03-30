@@ -119,7 +119,6 @@ class Network():
                 self.adjacency[a][b] = ab_attribute_values
                 self.adjacency[b][a] = ba_attribute_values
 
-        print(self.adjacency)
         # close database connection
         database_cursor.close()
         database_connection.close()

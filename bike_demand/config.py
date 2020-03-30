@@ -256,8 +256,8 @@ class ApplicationConfig():
         """initialize application configuration data, void"""
 
         # locations of base and build sqlite databases
-        self.base_sqlite_file = 'data/bike_base.db' # default to be overwritten by command line options
-        self.build_sqlite_file = 'data/bike_build.db' # default to be overwritten by command line options
+        self.base_sqlite_file = 'ambag_example/data/example.db' # default to be overwritten by command line options
+        self.build_sqlite_file = 'ambag_example/data/example.db' # default to be overwritten by command line options
 
         # taz table name and column names
         self.taz_table_name = 'taz'
