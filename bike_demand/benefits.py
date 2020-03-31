@@ -19,11 +19,13 @@ def benefits_main():
     parser.add_argument('--build',dest='build',action='store')
     parser.add_argument('--base_disk',help='read base skims from disk to speed up incremental demand',action='store_true') #happens to be irrelevant for benefits
     args = parser.parse_args()
-    resources.application_config.base_sqlite_file = args.base
-    resources.application_config.build_sqlite_file = args.build
+    if args.base:
+        resources.application_config.base_sqlite_file = args.base
+    if args.build:
+        resources.application_config.build_sqlite_file = args.build
 
     # get number of zones to dimension matrices
-    nzones = resources.application_config.num_zones + 1
+    nzones = resources.application_config.num_zones
 
     # read auto times and distances
     auto_skim = read_matrix_from_sqlite(resources,'auto_skim',resources.application_config.base_sqlite_file)
