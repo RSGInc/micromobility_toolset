@@ -1,6 +1,9 @@
 import argparse
 import time
 
+from activitysim.core import pipeline
+from activitysim.core import inject
+
 from bike_demand import incremental_demand
 from bike_demand import benefits
 from bike_demand import assign_demand
@@ -12,14 +15,16 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--type',dest='type',action='store')
-    parser.add_argument('--base')
-    parser.add_argument('--build')
-    parser.add_argument('--base_disk',help='read base skims from disk to speed up incremental demand',action='store_true')
     args = parser.parse_args()
+
+    inject.add_injectable('configs_dir', 'ambag_example/configs')
+    inject.add_injectable('data_dir', 'ambag_example/data')
+    inject.add_injectable('output_dir', 'ambag_example/output')
 
     model = args.type
     if model == "incremental_demand":
-        incremental_demand.incremental_demand_main()
+        pipeline.run(models=['incremental_demand'])
+        pipeline.close_pipeline()
     elif model == "benefits":
         benefits.benefits_main()
     elif model == "assign_demand":

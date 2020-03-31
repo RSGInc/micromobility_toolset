@@ -1,11 +1,243 @@
 import argparse
-import numpy
+import numpy as np
 
-from . import (network, config, output)
-from .input import *
+from activitysim.core import inject
+from activitysim.core.config import (
+    setting,
+    data_file_path,
+    read_model_settings)
+
+from . import (network, output)
+from .input import read_taz_from_sqlite, read_matrix_from_sqlite
 
 
-def add_derived_network_attributes(net,config):
+@inject.step()
+def incremental_demand():
+    # initialize configuration data
+    network_settings = read_model_settings('network.yaml')
+    trips_settings = read_model_settings('trips.yaml')
+
+    # store number of zones
+    max_zone = setting('max_zone') + 1
+
+    # read network data
+    base_sqlite_file = data_file_path(setting('base_sqlite_file'))
+    build_sqlite_file = data_file_path(setting('build_sqlite_file'))
+    base_net = network.Network(network_settings, base_sqlite_file)
+    build_net = network.Network(network_settings, build_sqlite_file)
+
+    # calculate derived network attributes
+    coef_walk = trips_settings.get('route_varcoef_walk')
+    coef_bike = trips_settings.get('route_varcoef_bike')
+    add_derived_network_attributes(base_net, coef_walk, coef_bike)
+    add_derived_network_attributes(build_net, coef_walk, coef_bike)
+
+    # read taz data and create taz node and county equivalency dictionaries
+    taz_data = read_taz_from_sqlite(base_sqlite_file,
+                                    setting('taz_table_name'),
+                                    index_col=setting('taz_table_name'),
+                                    columns=[setting('taz_node_column'),
+                                             setting('taz_county_column')])
+
+    taz_nodes = {}
+    taz_county = {}
+    for taz in taz_data:
+        taz_nodes[taz] = taz_data[taz][setting('taz_node_column')]
+        taz_county[taz] = taz_data[taz][setting('taz_county_column')]
+
+
+    # read base skims from disk or perform path searches
+    if setting('read_base_skims_from_disk'):
+        print('reading base skims from disk...')
+        base_bike_skim = read_matrix_from_sqlite(
+            base_sqlite_file, 'bike_skim',
+            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
+    else:
+        print('skimming base network...')
+        base_bike_skim = base_net.get_skim_matrix(taz_nodes,
+                                                  trips_settings.get('route_varcoef_bike'),
+                                                  trips_settings.get('max_cost_bike'))
+        base_bike_skim = base_bike_skim * \
+                            (np.ones((max_zone, max_zone)) - np.diag(np.ones(max_zone)))
+
+        print('writing results...')
+        output.write_matrix_to_sqlite(base_bike_skim,
+                                      base_sqlite_file,
+                                      'bike_skim',
+                                      ['value'])
+
+    # read build skims from disk or perform path searches
+    if setting('read_build_skims_from_disk'):
+        print('reading build skims from disk...')
+        build_bike_skim = read_matrix_from_sqlite(
+            build_sqlite_file, 'bike_skim',
+            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
+    else:
+        print('skimming build network...')
+        build_bike_skim = build_net.get_skim_matrix(taz_nodes,
+                                                    trips_settings.get('route_varcoef_bike'),
+                                                    trips_settings.get('max_cost_bike'))
+        build_bike_skim = build_bike_skim * \
+                            (np.ones((max_zone, max_zone)) - np.diag(np.ones(max_zone)))
+
+        # print('writing results...')
+        output.write_matrix_to_sqlite(build_bike_skim,
+                                      build_sqlite_file,
+                                      'bike_skim',
+                                      ['value'])
+
+    # fix build walk skims to zero, not needed for incremental model
+    base_walk_skim = np.zeros((max_zone, max_zone))
+    build_walk_skim = np.zeros((max_zone, max_zone))
+
+    # don't report zero divide in np arrayes
+    np.seterr(divide='ignore', invalid='ignore')
+
+    # # create 0-1 mask for santa clara zones
+    santa_clara_mask = np.zeros((max_zone, max_zone))
+    # for i in range(max_zone):
+    #     if taz_county[i] == resources.mode_choice_config.santa_clara_county_code:
+    #         santa_clara_mask[i,:] = 1
+    #
+    # # replace bike skim in santa clara with walk skim
+    # base_bike_skim = santa_clara_mask * base_walk_skim + (1-santa_clara_mask) * base_bike_skim
+    # build_bike_skim = santa_clara_mask * build_walk_skim + (1-santa_clara_mask) * build_bike_skim
+
+    print("\nperforming model calculations...")
+
+    # loop over market segments
+    for table in trips_settings.get('trip_tables'):
+
+        # read base trip table into matrix
+        base_trips = read_matrix_from_sqlite(
+            base_sqlite_file, table,
+            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
+
+        if base_trips.size == 0:
+            print('\n%s is empty or missing' % table)
+            continue
+        # calculate base walk and bike utilities
+        base_bike_util = base_bike_skim * \
+                            (santa_clara_mask * trips_settings.get('bike_dist_coef_santa_clara') +\
+                                (1 - santa_clara_mask) * trips_settings.get('bike_skim_coef'))
+        base_walk_util = base_walk_skim * trips_settings.get('walk_skim_coef')
+
+        # calculate build walk and bike utilities
+        build_bike_util = build_bike_skim * ( santa_clara_mask * trips_settings.get('bike_dist_coef_santa_clara') + (1 - santa_clara_mask) * trips_settings.get('bike_skim_coef'))
+        build_walk_util = build_walk_skim * trips_settings.get('walk_skim_coef')
+
+        # if not nhb, average PA and AP bike utilities
+        if table != 'nhbtrip':
+            base_bike_util = 0.5 * (base_bike_util + np.transpose(base_bike_util))
+            build_bike_util = 0.5 * (build_bike_util + np.transpose(build_bike_util))
+
+        # create 0-1 availability matrices when skim > 0
+        walk_avail = (base_walk_skim > 0) + np.diag(np.ones(max_zone))
+        if table !='nhbtrip':
+            bike_avail = (base_bike_skim > 0) * np.transpose(base_bike_skim > 0)  + np.diag(np.ones(max_zone))
+        else:
+            bike_avail = (base_bike_skim > 0) + np.diag(np.ones(max_zone))
+
+        # non-available gets extreme negative utility
+        base_bike_util = bike_avail * base_bike_util - 999 * ( 1 - bike_avail )
+        base_walk_util = walk_avail * base_walk_util - 999 * ( 1 - walk_avail )
+        build_bike_util = bike_avail * build_bike_util - 999 * ( 1 - bike_avail )
+        build_walk_util = walk_avail * build_walk_util - 999 * ( 1 - walk_avail )
+
+        # split full trip matrix and sum up into motorized, nonmotorized, walk, bike, and total
+        motorized_trips = np.sum(base_trips[:,:,:5],2)
+        nonmotor_trips = np.sum(base_trips[:,:,5:],2)
+        walk_trips = base_trips[:,:,5]
+        bike_trips = base_trips[:,:,6]
+        total_trips = motorized_trips + nonmotor_trips
+
+        # log base trips to console
+        print('')
+        print(('segment ' + table))
+        print('base trips')
+        print('total motorized walk bike')
+        print(int(np.sum(total_trips)), int(np.sum(motorized_trips)), int(np.sum(walk_trips)), int(np.sum(bike_trips)))
+
+        # calculate logit denominator
+        denom = (motorized_trips + walk_trips * np.exp(build_walk_util - base_walk_util) + bike_trips * np.exp( build_bike_util - base_bike_util ) )
+
+        # perform incremental logit
+        build_motor_trips = total_trips * np.nan_to_num( motorized_trips / denom )
+        build_walk_trips = total_trips * np.nan_to_num( walk_trips * np.exp( build_walk_util - base_walk_util ) / denom )
+        build_bike_trips = total_trips * np.nan_to_num( bike_trips * np.exp( build_bike_util - base_bike_util ) / denom )
+
+        # combine into one trip matrix and proportionally scale motorized sub-modes
+        build_trips = base_trips.copy()
+        for motorized_idx in range(5):
+            build_trips[:,:,motorized_idx] = base_trips[:,:,motorized_idx] * np.nan_to_num(build_motor_trips / motorized_trips)
+        build_trips[:,:,5] = build_walk_trips
+        build_trips[:,:,6] = build_bike_trips
+
+        # write matrix to database
+        output.write_matrix_to_sqlite(build_trips,
+                                      build_sqlite_file,
+                                      table,
+                                      trips_settings.get('modes'))
+
+        # log build trips to console
+        print('build trips')
+        print('total motorized walk bike')
+        print(int(np.sum(build_trips)), int(np.sum(build_motor_trips)), int(np.sum(build_walk_trips)), int(np.sum(build_bike_trips)))
+
+        # # perform tracing if desired
+        # if resources.application_config.trace == True and resources.application_config.trace_segment == resources.mode_choice_config.trip_tables[idx]:
+        #
+        #     ptaz = resources.application_config.trace_ptaz
+        #     ataz = resources.application_config.trace_ataz
+        #
+        #     print('')
+        #     print('TRACE')
+        #     print('ptaz: ', ptaz)
+        #     print('ataz: ', ataz)
+        #
+        #     print('base pa')
+        #     path = base_net.single_source_dijkstra(taz_nodes[ptaz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ataz])[1][taz_nodes[ataz]]
+        #     print('path: ', path)
+        #     for var in resources.mode_choice_config.route_varcoef_bike:
+        #         print(var, base_net.path_trace(path,var))
+        #
+        #     print('')
+        #     print('build pa')
+        #     path = build_net.single_source_dijkstra(taz_nodes[ptaz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ataz])[1][taz_nodes[ataz]]
+        #     print('path: ', path)
+        #     for var in resources.mode_choice_config.route_varcoef_bike:
+        #         print(var, build_net.path_trace(path,var))
+        #
+        #     print('')
+        #     print('base ap')
+        #     path = base_net.single_source_dijkstra(taz_nodes[ataz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ptaz])[1][taz_nodes[ptaz]]
+        #     print('path: ', path)
+        #     for var in resources.mode_choice_config.route_varcoef_bike:
+        #         print(var, base_net.path_trace(path,var))
+        #
+        #     print('')
+        #     print('build ap')
+        #     path = build_net.single_source_dijkstra(taz_nodes[ataz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ptaz])[1][taz_nodes[ptaz]]
+        #     print('path: ', path)
+        #     for var in resources.mode_choice_config.route_varcoef_bike:
+        #         print(var, build_net.path_trace(path,var))
+        #
+        #     print('')
+        #     print('chg. bike util')
+        #     print(build_bike_util[ataz-1][ptaz-1] - base_bike_util[ataz-1][ptaz-1])
+        #
+        #     print('')
+        #     print('base trips')
+        #     print('da s2 s3 wt dt wk bk')
+        #     print(base_trips[ptaz-1,ataz-1,0], base_trips[ptaz-1,ataz-1,1], base_trips[ptaz-1,ataz-1,2], base_trips[ptaz-1,ataz-1,3], base_trips[ptaz-1,ataz-1,4], base_trips[ptaz-1,ataz-1,5], base_trips[ptaz-1,ataz-1,6])
+        #
+        #     print('')
+        #     print('build trips')
+        #     print('da s2 s3 wt dt wk bk')
+        #     print(build_trips[ptaz-1,ataz-1,0], build_trips[ptaz-1,ataz-1,1], build_trips[ptaz-1,ataz-1,2], build_trips[ptaz-1,ataz-1,3], build_trips[ptaz-1,ataz-1,4], build_trips[ptaz-1,ataz-1,5], build_trips[ptaz-1,ataz-1,6])
+
+
+def add_derived_network_attributes(net, coef_walk, coef_bike):
     """add network attributes that are combinations of attributes from sqlite database"""
 
     # add new link attribute columns
@@ -89,203 +321,8 @@ def add_derived_network_attributes(net,config):
 
             net.set_dual_attribute_value(edge1,edge2,'path_onoff', 1 * ( (path1 + path2) == 1 ) )
 
-            net.set_dual_attribute_value(edge1,edge2,'walk_cost',net.calculate_variable_cost(edge1,edge2,config.mode_choice_config.route_varcoef_walk,0.0) )
-            net.set_dual_attribute_value(edge1,edge2,'bike_cost',net.calculate_variable_cost(edge1,edge2,config.mode_choice_config.route_varcoef_bike,0.0) )
-
-def incremental_demand_main():
-    # initialize configuration data
-    resources = config.Config()
-
-    # store number of zones
-    max_zone = resources.application_config.max_zone + 1
-
-    # read network data
-    base_net = network.Network(resources.network_config,resources.application_config.base_sqlite_file)
-    build_net = network.Network(resources.network_config,resources.application_config.build_sqlite_file)
-
-    # calculate derived network attributes
-    add_derived_network_attributes(base_net,resources)
-    add_derived_network_attributes(build_net,resources)
-
-    # read taz data and create taz node and county equivalency dictionaries
-    taz_data = read_taz_from_sqlite(resources)
-    taz_nodes = {}
-    taz_county = {}
-    for taz in taz_data:
-        taz_nodes[taz] = taz_data[taz][resources.application_config.taz_node_column]
-        taz_county[taz] = taz_data[taz][resources.application_config.taz_county_column]
-
-
-    # read base skims from disk or perform path searches
-    if resources.application_config.read_base_skims_from_disk:
-        print('reading base skims from disk...')
-        # walk skims not needed for incremental model
-        # base_walk_skim = read_matrix_from_sqlite(resources,'walk_skim',resources.application_config.base_sqlite_file)
-        base_bike_skim = read_matrix_from_sqlite(resources,'bike_skim',resources.application_config.base_sqlite_file)
-    else:
-        print('skimming base network...')
-        # walk skims not needed for incremental model
-        # base_walk_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_walk,resources.mode_choice_config.max_cost_walk) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
-        base_bike_skim = base_net.get_skim_matrix(taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
-
-        print('writing results...')
-        # walk skims not needed for incremental model
-        # output.write_matrix_to_sqlite(base_walk_skim,resources.application_config.base_sqlite_file,'walk_skim',['value'])
-        output.write_matrix_to_sqlite(base_bike_skim,resources.application_config.base_sqlite_file,'bike_skim',['value'])
-
-    # read build skims from disk or perform path searches
-    if resources.application_config.read_build_skims_from_disk:
-        print('reading build skims from disk...')
-        build_bike_skim = read_matrix_from_sqlite(resources,'bike_skim',resources.application_config.build_sqlite_file)
-    else:
-        print('skimming build network...')
-        build_bike_skim = build_net.get_skim_matrix(taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
-
-        # print('writing results...')
-        output.write_matrix_to_sqlite(build_bike_skim,resources.application_config.build_sqlite_file,'bike_skim',['value'])
-
-    # fix build walk skims to zero, not needed for incremental model
-    base_walk_skim = numpy.zeros((max_zone,max_zone))
-    build_walk_skim = numpy.zeros((max_zone,max_zone))
-
-    # don't report zero divide in numpy arrayes
-    numpy.seterr(divide='ignore',invalid='ignore')
-
-    # # create 0-1 mask for santa clara zones
-    santa_clara_mask = numpy.zeros((max_zone,max_zone))
-    # for i in range(max_zone):
-    #     if taz_county[i] == resources.mode_choice_config.santa_clara_county_code:
-    #         santa_clara_mask[i,:] = 1
-    #
-    # # replace bike skim in santa clara with walk skim
-    # base_bike_skim = santa_clara_mask * base_walk_skim + (1-santa_clara_mask) * base_bike_skim
-    # build_bike_skim = santa_clara_mask * build_walk_skim + (1-santa_clara_mask) * build_bike_skim
-
-    print('')
-    print('performing model calculations...')
-
-    # loop over market segments
-    for idx in range(len(resources.mode_choice_config.trip_tables)):
-
-        # read base trip table into matrix
-        base_trips = read_matrix_from_sqlite(resources,resources.mode_choice_config.trip_tables[idx],resources.application_config.base_sqlite_file)
-        if base_trips.size == 0:
-            print('\n%s is empty or missing' % resources.mode_choice_config.trip_tables[idx])
-            continue
-        # calculate base walk and bike utilities
-        base_bike_util = base_bike_skim * ( santa_clara_mask * resources.mode_choice_config.bike_dist_coef_santa_clara[idx] + (1 - santa_clara_mask) * resources.mode_choice_config.bike_skim_coef[idx])
-        base_walk_util = base_walk_skim * resources.mode_choice_config.walk_skim_coef[idx]
-
-        # calculate build walk and bike utilities
-        build_bike_util = build_bike_skim * ( santa_clara_mask * resources.mode_choice_config.bike_dist_coef_santa_clara[idx] + (1 - santa_clara_mask) * resources.mode_choice_config.bike_skim_coef[idx])
-        build_walk_util = build_walk_skim * resources.mode_choice_config.walk_skim_coef[idx]
-
-        # if not nhb, average PA and AP bike utilities
-        if resources.mode_choice_config.trip_tables[idx] != 'nhbtrip':
-            base_bike_util = 0.5 * (base_bike_util + numpy.transpose(base_bike_util))
-            build_bike_util = 0.5 * (build_bike_util + numpy.transpose(build_bike_util))
-
-        # create 0-1 availability matrices when skim > 0
-        walk_avail = (base_walk_skim > 0) + numpy.diag(numpy.ones(max_zone))
-        if resources.mode_choice_config.trip_tables[idx]!='nhbtrip':
-            bike_avail = (base_bike_skim > 0) * numpy.transpose(base_bike_skim > 0)  + numpy.diag(numpy.ones(max_zone))
-        else:
-            bike_avail = (base_bike_skim > 0) + numpy.diag(numpy.ones(max_zone))
-
-        # non-available gets extreme negative utility
-        base_bike_util = bike_avail * base_bike_util - 999 * ( 1 - bike_avail )
-        base_walk_util = walk_avail * base_walk_util - 999 * ( 1 - walk_avail )
-        build_bike_util = bike_avail * build_bike_util - 999 * ( 1 - bike_avail )
-        build_walk_util = walk_avail * build_walk_util - 999 * ( 1 - walk_avail )
-
-        # split full trip matrix and sum up into motorized, nonmotorized, walk, bike, and total
-        motorized_trips = numpy.sum(base_trips[:,:,:5],2)
-        nonmotor_trips = numpy.sum(base_trips[:,:,5:],2)
-        walk_trips = base_trips[:,:,5]
-        bike_trips = base_trips[:,:,6]
-        total_trips = motorized_trips + nonmotor_trips
-
-        # log base trips to console
-        print('')
-        print(('segment '+resources.mode_choice_config.trip_tables[idx]))
-        print('base trips')
-        print('total motorized walk bike')
-        print(int(numpy.sum(total_trips)), int(numpy.sum(motorized_trips)), int(numpy.sum(walk_trips)), int(numpy.sum(bike_trips)))
-
-        # calculate logit denominator
-        denom = (motorized_trips + walk_trips * numpy.exp(build_walk_util - base_walk_util) + bike_trips * numpy.exp( build_bike_util - base_bike_util ) )
-
-        # perform incremental logit
-        build_motor_trips = total_trips * numpy.nan_to_num( motorized_trips / denom )
-        build_walk_trips = total_trips * numpy.nan_to_num( walk_trips * numpy.exp( build_walk_util - base_walk_util ) / denom )
-        build_bike_trips = total_trips * numpy.nan_to_num( bike_trips * numpy.exp( build_bike_util - base_bike_util ) / denom )
-
-        # combine into one trip matrix and proportionally scale motorized sub-modes
-        build_trips = base_trips.copy()
-        for motorized_idx in range(5):
-            build_trips[:,:,motorized_idx] = base_trips[:,:,motorized_idx] * numpy.nan_to_num(build_motor_trips / motorized_trips)
-        build_trips[:,:,5] = build_walk_trips
-        build_trips[:,:,6] = build_bike_trips
-
-        # write matrix to database
-        output.write_matrix_to_sqlite(build_trips,resources.application_config.build_sqlite_file,resources.mode_choice_config.trip_tables[idx],resources.mode_choice_config.modes)
-
-        # log build trips to console
-        print('build trips')
-        print('total motorized walk bike')
-        print(int(numpy.sum(build_trips)), int(numpy.sum(build_motor_trips)), int(numpy.sum(build_walk_trips)), int(numpy.sum(build_bike_trips)))
-
-        # perform tracing if desired
-        if resources.application_config.trace == True and resources.application_config.trace_segment == resources.mode_choice_config.trip_tables[idx]:
-
-            ptaz = resources.application_config.trace_ptaz
-            ataz = resources.application_config.trace_ataz
-
-            print('')
-            print('TRACE')
-            print('ptaz: ', ptaz)
-            print('ataz: ', ataz)
-
-            print('base pa')
-            path = base_net.single_source_dijkstra(taz_nodes[ptaz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ataz])[1][taz_nodes[ataz]]
-            print('path: ', path)
-            for var in resources.mode_choice_config.route_varcoef_bike:
-                print(var, base_net.path_trace(path,var))
-
-            print('')
-            print('build pa')
-            path = build_net.single_source_dijkstra(taz_nodes[ptaz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ataz])[1][taz_nodes[ataz]]
-            print('path: ', path)
-            for var in resources.mode_choice_config.route_varcoef_bike:
-                print(var, build_net.path_trace(path,var))
-
-            print('')
-            print('base ap')
-            path = base_net.single_source_dijkstra(taz_nodes[ataz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ptaz])[1][taz_nodes[ptaz]]
-            print('path: ', path)
-            for var in resources.mode_choice_config.route_varcoef_bike:
-                print(var, base_net.path_trace(path,var))
-
-            print('')
-            print('build ap')
-            path = build_net.single_source_dijkstra(taz_nodes[ataz],resources.mode_choice_config.route_varcoef_bike,target=taz_nodes[ptaz])[1][taz_nodes[ptaz]]
-            print('path: ', path)
-            for var in resources.mode_choice_config.route_varcoef_bike:
-                print(var, build_net.path_trace(path,var))
-
-            print('')
-            print('chg. bike util')
-            print(build_bike_util[ataz-1][ptaz-1] - base_bike_util[ataz-1][ptaz-1])
-
-            print('')
-            print('base trips')
-            print('da s2 s3 wt dt wk bk')
-            print(base_trips[ptaz-1,ataz-1,0], base_trips[ptaz-1,ataz-1,1], base_trips[ptaz-1,ataz-1,2], base_trips[ptaz-1,ataz-1,3], base_trips[ptaz-1,ataz-1,4], base_trips[ptaz-1,ataz-1,5], base_trips[ptaz-1,ataz-1,6])
-
-            print('')
-            print('build trips')
-            print('da s2 s3 wt dt wk bk')
-            print(build_trips[ptaz-1,ataz-1,0], build_trips[ptaz-1,ataz-1,1], build_trips[ptaz-1,ataz-1,2], build_trips[ptaz-1,ataz-1,3], build_trips[ptaz-1,ataz-1,4], build_trips[ptaz-1,ataz-1,5], build_trips[ptaz-1,ataz-1,6])
+            net.set_dual_attribute_value(edge1,edge2,'walk_cost',net.calculate_variable_cost(edge1,edge2,coef_walk,0.0) )
+            net.set_dual_attribute_value(edge1,edge2,'bike_cost',net.calculate_variable_cost(edge1,edge2,coef_bike,0.0) )
 
 
 if __name__ == '__main__':

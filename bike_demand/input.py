@@ -1,41 +1,38 @@
-import csv
 import sqlite3
-import time
 
 import numpy as np
 import pandas as pd
 
-from . import (choice_set, network, config, output)
 
-def read_taz_from_sqlite(config):
+def read_taz_from_sqlite(sqlite_file, table_name, index_col=None, columns=None):
 
     # open database cursor
-    database_connection = sqlite3.connect(config.application_config.base_sqlite_file)
+    database_connection = sqlite3.connect(sqlite_file)
 
-    taz_df = pd.read_sql('select * from ' + config.application_config.taz_table_name,
+    taz_df = pd.read_sql('select * from ' + table_name,
                          database_connection,
-                         index_col=config.application_config.taz_taz_column,
-                         columns=[config.application_config.taz_node_column,
-                                  config.application_config.taz_county_column])
+                         index_col=index_col,
+                         columns=columns)
 
     database_connection.close()
 
     return taz_df.T.to_dict()
 
 
-def read_matrix_from_sqlite(config, table_name, sqlite_file):
+def read_matrix_from_sqlite(sqlite_file, table_name, orig_col, dest_col, columns=None):
 
     # open database cursor
     database_connection = sqlite3.connect(sqlite_file)
 
     matrix_df = pd.read_sql('select * from ' + table_name,
                             database_connection,
-                            index_col=['ataz', 'ptaz'])
+                            index_col=[orig_col, dest_col],
+                            columns=columns)
 
     database_connection.close()
 
-    atazs = matrix_df.index.get_level_values('ataz')
-    ptazs = matrix_df.index.get_level_values('ptaz')
+    atazs = matrix_df.index.get_level_values(orig_col)
+    ptazs = matrix_df.index.get_level_values(dest_col)
 
     if matrix_df.shape[0] == 0:
         return np.array([])
@@ -51,11 +48,7 @@ def read_matrix_from_sqlite(config, table_name, sqlite_file):
 
     if matrix_df.shape[1] > 1:
         trip_matrix[atazs, ptazs, :] = matrix_df.iloc[:, 0:].to_numpy()
-        # for row in rows:
-        #     trip_matrix[row[0],row[1],:] = row[2:]
     else:
-        atazs = matrix_df.index.get_level_values(0)
-        ptazs = matrix_df.index.get_level_values(1)
         trip_matrix[atazs, ptazs] = matrix_df.iloc[:, 0].to_numpy()
 
     return trip_matrix

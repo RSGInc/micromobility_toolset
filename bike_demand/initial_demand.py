@@ -1,5 +1,5 @@
 import choice_set, network, config, output, csv, sqlite3, numpy, time
-from input import *
+from .input import *
 
 
 def add_derived_network_attributes(net):

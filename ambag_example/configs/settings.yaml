@@ -3,6 +3,9 @@ models:
   - benefits
   - assign_demand
 
+# locations of base and build sqlite databases
+base_sqlite_file: example.db
+build_sqlite_file: example.db
 
 # taz table name and column names
 taz_table_name: taz
@@ -11,7 +14,8 @@ taz_node_column: node_id
 taz_county_column: co
 
 # number of zones
-num_zones: 1884
+num_zones: 25
+max_zone: 1133
 
 # should tracing be performed in incremental logit, and for which zones and segment
 trace: False

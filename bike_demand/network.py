@@ -9,7 +9,7 @@ import pandas as pd
 
 class Network():
 
-    def __init__(self, network_config, sqlite_file):
+    def __init__(self, network_settings, sqlite_file):
         """initialize network data structure, void"""
 
         self.adjacency = {}
@@ -18,7 +18,7 @@ class Network():
 
         self.adjacency_names = []
         self.node_names = []
-        self.dual_names  =[]
+        self.dual_names = []
 
         self.node_x_name = None
         self.node_y_name = None
@@ -27,32 +27,33 @@ class Network():
 
         self.read_links_from_sqlite(
             sqlite_file,
-            network_config.link_table,
-            network_config.from_name,
-            network_config.to_name,
-            network_config.link_attributes_by_direction
+            network_settings.get('link_table'),
+            network_settings.get('from_name'),
+            network_settings.get('to_name'),
+            network_settings.get('link_attributes_by_direction')
         )
 
         self.read_nodes_from_sqlite(
             sqlite_file,
-            network_config.node_table,
-            network_config.node_name,
-            network_config.node_attributes
+            network_settings.get('node_table'),
+            network_settings.get('node_name'),
+            network_settings.get('node_attributes')
         )
 
         self.check_network_completeness()
 
-        self.set_node_x_name(network_config.node_x_name)
-        self.set_node_y_name(network_config.node_y_name)
+        self.set_node_x_name(network_settings.get('node_x_name'))
+        self.set_node_y_name(network_settings.get('node_y_name'))
 
-        self.add_edge_attribute(network_config.centroid_connector_name)
-        self.centroid_connector_name = network_config.centroid_connector_name
+        self.add_edge_attribute(network_settings.get('centroid_connector_name'))
+        self.centroid_connector_name = network_settings.get('centroid_connector_name')
+        centroid_connector_test = network_settings.get('centroid_connector_test')
         for a in self.adjacency:
             for b in self.adjacency[a]:
-                if self.get_edge_attribute_value((a, b), network_config.centroid_connector_test[0]) == network_config.centroid_connector_test:
-                    self.set_edge_attribute_value((a, b), network_config.centroid_connector_name, True)
+                if self.get_edge_attribute_value((a, b), centroid_connector_test[0]) == centroid_connector_test:
+                    self.set_edge_attribute_value((a, b), self.centroid_connector_name, True)
                 else:
-                    self.set_edge_attribute_value((a, b), network_config.centroid_connector_name, False)
+                    self.set_edge_attribute_value((a, b), self.centroid_connector_name, False)
 
         self.create_dual()
 
