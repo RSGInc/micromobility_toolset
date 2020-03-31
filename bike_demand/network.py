@@ -3,6 +3,7 @@ from math import atan2, pi
 import sqlite3
 import heapq
 
+import numpy as np
 import pandas as pd
 
 
@@ -618,3 +619,25 @@ class Network():
             temp.append(PS)
 
         return temp
+
+    def get_skim_matrix(self, taz_nodes, varcoef, max_cost=None):
+        """skim network net starting from taz nodes in taz_nodes, with variable coefficients varcoef
+        until max_cost is reached, return matrix
+        """
+
+        # num_zones = len(taz_nodes)
+        # print(num_zones)
+        max_taz = max(taz_nodes.keys())
+        skim_matrix = np.zeros((max_taz+1, max_taz+1))
+
+        for i in taz_nodes.keys():
+
+            centroid = taz_nodes[i]
+            costs = self.single_source_dijkstra(centroid, varcoef, max_cost=max_cost)[0]
+
+            for j in taz_nodes.keys():
+
+                if taz_nodes[j] in costs:
+                    skim_matrix[i, j] = costs[taz_nodes[j]]
+
+        return skim_matrix

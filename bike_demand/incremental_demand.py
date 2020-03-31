@@ -126,7 +126,7 @@ def incremental_demand_main():
         print('skimming base network...')
         # walk skims not needed for incremental model
         # base_walk_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_walk,resources.mode_choice_config.max_cost_walk) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
-        base_bike_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
+        base_bike_skim = base_net.get_skim_matrix(taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
 
         print('writing results...')
         # walk skims not needed for incremental model
@@ -139,7 +139,7 @@ def incremental_demand_main():
         build_bike_skim = read_matrix_from_sqlite(resources,'bike_skim',resources.application_config.build_sqlite_file)
     else:
         print('skimming build network...')
-        build_bike_skim = get_skim_matrix(build_net,taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
+        build_bike_skim = build_net.get_skim_matrix(taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
 
         # print('writing results...')
         output.write_matrix_to_sqlite(build_bike_skim,resources.application_config.build_sqlite_file,'bike_skim',['value'])

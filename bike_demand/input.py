@@ -18,6 +18,8 @@ def read_taz_from_sqlite(config):
                          columns=[config.application_config.taz_node_column,
                                   config.application_config.taz_county_column])
 
+    database_connection.close()
+
     return taz_df.T.to_dict()
 
 
@@ -29,6 +31,8 @@ def read_matrix_from_sqlite(config, table_name, sqlite_file):
     matrix_df = pd.read_sql('select * from ' + table_name,
                             database_connection,
                             index_col=['ataz', 'ptaz'])
+
+    database_connection.close()
 
     atazs = matrix_df.index.get_level_values('ataz')
     ptazs = matrix_df.index.get_level_values('ptaz')
@@ -55,29 +59,6 @@ def read_matrix_from_sqlite(config, table_name, sqlite_file):
         trip_matrix[atazs, ptazs] = matrix_df.iloc[:, 0].to_numpy()
 
     return trip_matrix
-
-
-def get_skim_matrix(net, taz_nodes, varcoef, max_cost=None):
-    """skim network net starting from taz nodes in taz_nodes, with variable coefficients varcoef
-    until max_cost is reached, return matrix
-    """
-
-    # num_zones = len(taz_nodes)
-    # print(num_zones)
-    max_taz = max(taz_nodes.keys())
-    skim_matrix = np.zeros((max_taz+1, max_taz+1))
-
-    for i in taz_nodes.keys():
-
-        centroid = taz_nodes[i]
-        costs = net.single_source_dijkstra(centroid, varcoef, max_cost=max_cost)[0]
-
-        for j in taz_nodes.keys():
-
-            if taz_nodes[j] in costs:
-                skim_matrix[i, j] = costs[taz_nodes[j]]
-
-    return skim_matrix
 
 
 def load_trip_matrix(net,trips,load_name,taz_nodes,varcoef,max_cost=None):
