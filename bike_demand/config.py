@@ -5,10 +5,10 @@ class Config():
 
         # initialize children
         self.network_config = NetworkConfig()
-        self.choice_set_config=ChoiceSetConfig()
-        self.output_config=OutputConfig()
-        self.mode_choice_config=ModeChoiceConfig()
-        self.application_config=ApplicationConfig()
+        self.choice_set_config = ChoiceSetConfig()
+        self.output_config = OutputConfig()
+        self.mode_choice_config = ModeChoiceConfig()
+        self.application_config = ApplicationConfig()
 
         #location of cycle tracks map-matched link traversals for route choice estimation
         self.trip_data_filename = 'data/cycletracks.csv'
@@ -19,8 +19,10 @@ class NetworkConfig():
     def __init__(self):
         """initialize network configuration data, void"""
 
-        # link table name, a, and b column names in sqlite database
-        self.link_table = 'link'
+        self.link_table = 'link'  # link table name in sqlite database
+        self.link_file = 'link.csv'  # link file for csv input
+
+        # link a, and b column names
         self.from_name = 'from_node'
         self.to_name = 'to_node'
 
@@ -36,8 +38,10 @@ class NetworkConfig():
             'shuttle_wait':    ('wait','wait')
         }
 
-        # node table name and attributes in sqlite database
-        self.node_table = 'node'
+        self.node_table = 'node'  # node table name in sqlite database
+        self.link_file = 'node.csv'  # node file for csv input
+
+        # node attributes
         self.node_name = 'node_id'
         self.node_attributes = {
             'xcoord':'xcoord',
@@ -59,16 +63,16 @@ class ChoiceSetConfig():
         """initialize choice set configuration data, void"""
 
         self.bounding_box_outer_box = {
-            'distance':                [1.0,        1.0],
-            'dne1':                [0.0001,    100.0],
-            'dne2':                [0.0001,    100.0],
-            'dne3':                [0.0001,    100.0],
-            'dw':                [0.001,    10000.0],
-            'riseft':            [0.0001,    10000.0],
-            'turn':            [0.0001,    10000.0],
-            'path_onoff':        [0.0001,    10000.0],
-            'bike_exclude':        [999.0,    999.0],
-            'thru_centroid':    [999.0,    999.0],
+        'distance':                [1.0, 1.0],
+            'dne1':                [0.0001, 100.0],
+            'dne2':                [0.0001, 100.0],
+            'dne3':                [0.0001, 100.0],
+            'dw':                  [0.001, 10000.0],
+            'riseft':              [0.0001, 10000.0],
+            'turn':                [0.0001, 10000.0],
+            'path_onoff':          [0.0001, 10000.0],
+            'bike_exclude':        [999.0, 999.0],
+            'thru_centroid':       [999.0, 999.0],
         }
 
         self.bounding_box_tolerance = 0.01
@@ -122,28 +126,28 @@ class ModeChoiceConfig():
 
         # coefficients by market segment
         self.ivt_coef = [-0.017,-0.017,-0.017,-0.017,
-                    -0.005,-0.005,-0.005,-0.005,
-                    -0.061,-0.061,-0.061,-0.061,
-                    -0.005,-0.005,-0.005,-0.005,
-                    -0.013]
+                         -0.005,-0.005,-0.005,-0.005,
+                         -0.061,-0.061,-0.061,-0.061,
+                         -0.005,-0.005,-0.005,-0.005,
+                         -0.013]
 
         self.walk_skim_coef = [-0.712,-0.712,-0.712,-0.712,
-                        -0.712,-0.712,-0.712,-0.712,
-                        -0.712,-0.712,-0.712,-0.712,
-                        -0.712,-0.712,-0.712,-0.712,
-                        -0.712]
+                               -0.712,-0.712,-0.712,-0.712,
+                               -0.712,-0.712,-0.712,-0.712,
+                               -0.712,-0.712,-0.712,-0.712,
+                               -0.712]
 
         self.bike_skim_coef = [-0.182,-0.182,-0.182,-0.182,
-                        -0.182,-0.182,-0.182,-0.182,
-                        -0.182,-0.182,-0.182,-0.182,
-                        -0.182,-0.182,-0.182,-0.182,
-                        -0.182]
+                               -0.182,-0.182,-0.182,-0.182,
+                               -0.182,-0.182,-0.182,-0.182,
+                               -0.182,-0.182,-0.182,-0.182,
+                               -0.182]
 
         self.bike_dist_coef_santa_clara = [-0.154,-0.154,-0.154,-0.154,
-                        -0.154,-0.154,-0.154,-0.154,
-                        -0.154,-0.154,-0.154,-0.154,
-                        -0.154,-0.154,-0.154,-0.154,
-                        -0.154]
+                                           -0.154,-0.154,-0.154,-0.154,
+                                           -0.154,-0.154,-0.154,-0.154,
+                                           -0.154,-0.154,-0.154,-0.154,
+                                           -0.154]
 
         # generalized cost coefficients for bike skimming
         self.route_varcoef_bike = {
@@ -177,75 +181,75 @@ class ModeChoiceConfig():
 
         # ASCs and calibration adjustments
         self.walk_asc = [-0.99,-0.12,-0.38,0.31,
-                    0.14,-1.62,-0.05,0.70,
-                    -1.036,-1.036,-1.036,-1.036,
-                    1.15,0.17,0.18,0.14,
-                    0.28]
+                         0.14,-1.62,-0.05,0.70,
+                         -1.036,-1.036,-1.036,-1.036,
+                         1.15,0.17,0.18,0.14,
+                         0.28]
 
         for i in range(len(self.walk_asc)):
             self.walk_asc[i] = self.walk_asc[i] + 0.30
 
         self.bike_asc = [-1.63,-0.76,-1.0,-0.33,
-                    -1.18,-2.94,-1.36,-0.62,
-                    -1.04,-1.04,-1.04,-1.04,
-                    -0.45,-0.46,-0.30,-0.31,
-                    -1.43]
+                         -1.18,-2.94,-1.36,-0.62,
+                         -1.04,-1.04,-1.04,-1.04,
+                         -0.45,-0.46,-0.30,-0.31,
+                         -1.43]
 
         bike_adjust = [-1.75,-1.75,-1.75,-1.75,
-                    -1.75,-1.75,-1.75,-1.75,
-                    -1.75,-1.75,-1.75,-1.75,
-                    -1.75,-1.75,-1.75,-1.75,
-                    -1.75]
+                       -1.75,-1.75,-1.75,-1.75,
+                       -1.75,-1.75,-1.75,-1.75,
+                       -1.75,-1.75,-1.75,-1.75,
+                       -1.75]
 
         for i in range(len(self.bike_asc)):
             self.bike_asc[i] = self.bike_asc[i] + bike_adjust[i]
 
         # more coefficients
         self.walk_intrazonal = [-0.613,-0.613,-0.613,-0.613,
-                        -0.613,-0.613,-0.613,-0.613,
-                        -0.613,-0.613,-0.613,-0.613,
-                        -0.613,-0.613,-0.613,-0.613,
-                        -0.613]
+                                -0.613,-0.613,-0.613,-0.613,
+                                -0.613,-0.613,-0.613,-0.613,
+                                -0.613,-0.613,-0.613,-0.613,
+                                -0.613]
 
         self.bike_intrazonal = [-1.720,-1.720,-1.720,-1.720,
-                        -1.720,-1.720,-1.720,-1.720,
-                        -1.720,-1.720,-1.720,-1.720,
-                        -1.720,-1.720,-1.720,-1.720,
-                        -1.720]
+                                -1.720,-1.720,-1.720,-1.720,
+                                -1.720,-1.720,-1.720,-1.720,
+                                -1.720,-1.720,-1.720,-1.720,
+                                -1.720]
 
         self.walk_santa_clara = [0.378,0.378,0.378,0.378,
-                            0.378,0.378,0.378,0.378,
-                            0.378,0.378,0.378,0.378,
-                            0.378,0.378,0.378,0.378,
-                            0.378]
+                                 0.378,0.378,0.378,0.378,
+                                 0.378,0.378,0.378,0.378,
+                                 0.378,0.378,0.378,0.378,
+                                 0.378]
 
         self.walk_santa_clara_intrazonal = [-1.985,-1.985,-1.985,-1.985,
-                                -1.985,-1.985,-1.985,-1.985,
-                                -1.985,-1.985,-1.985,-1.985,
-                                -1.985,-1.985,-1.985,-1.985,
-                                -1.985]
+                                            -1.985,-1.985,-1.985,-1.985,
+                                            -1.985,-1.985,-1.985,-1.985,
+                                            -1.985,-1.985,-1.985,-1.985,
+                                            -1.985]
 
         self.bike_santa_clara = [-0.982,-0.982,-0.982,-0.982,
-                        -0.982,-0.982,-0.982,-0.982,
-                        -0.982,-0.982,-0.982,-0.982,
-                        -0.982,-0.982,-0.982,-0.982,
-                        -0.982]
+                                 -0.982,-0.982,-0.982,-0.982,
+                                 -0.982,-0.982,-0.982,-0.982,
+                                 -0.982,-0.982,-0.982,-0.982,
+                                 -0.982]
 
         self.bike_santa_clara_intrazonal = [0.775,0.775,0.775,0.775,
-                                0.775,0.775,0.775,0.775,
-                                0.775,0.775,0.775,0.775,
-                                0.775,0.775,0.775,0.775,
-                                0.775]
+                                            0.775,0.775,0.775,0.775,
+                                            0.775,0.775,0.775,0.775,
+                                            0.775,0.775,0.775,0.775,
+                                            0.775]
 
         # county code for Santa Clara in taz table
         self.santa_clara_county_code = 85
 
         # reduction of motorized utility for UCSC
         self.motorized_ucsc_attr = [-0.0,-0.0,-0.0,-0.0,
-                                -0.0,-0.0,-0.0,-0.0,
-                                -0.0,-0.0,-0.0,-0.0,
-                                -0.0,-0.0,-0.0,-0.0,
-                                -0.0]
+                                    -0.0,-0.0,-0.0,-0.0,
+                                    -0.0,-0.0,-0.0,-0.0,
+                                    -0.0,-0.0,-0.0,-0.0,
+                                    -0.0]
 
         # taz of UCSC
         self.ucsc_taz = 34
@@ -256,8 +260,12 @@ class ApplicationConfig():
         """initialize application configuration data, void"""
 
         # locations of base and build sqlite databases
-        self.base_sqlite_file = 'ambag_example/data/example.db' # default to be overwritten by command line options
-        self.build_sqlite_file = 'ambag_example/data/example.db' # default to be overwritten by command line options
+        self.base_sqlite_file = 'ambag_example/data/example.db'
+        self.build_sqlite_file = 'ambag_example/data/example.db'
+
+        # directories for csv inputs
+        self.base_data_dir = 'ambag_example/data/'
+        self.build_data_dir = 'ambag_example/data/'
 
         # taz table name and column names
         self.taz_table_name = 'taz'
@@ -266,7 +274,8 @@ class ApplicationConfig():
         self.taz_county_column = 'co'
 
         # number of zones
-        self.num_zones = 1134
+        self.num_zones = 25
+        self.max_zone = 1133
 
         # should tracing be performed in incremental logit, and for which zones and segment
         self.trace = False
@@ -276,8 +285,8 @@ class ApplicationConfig():
 
         # parameters for emissions estimation
         self.pollutants = ['CO2']
-        self.grams_per_mile= [311.0]
-        self.grams_per_minute= [79.0]
+        self.grams_per_mile = [311.0]
+        self.grams_per_minute = [79.0]
         self.sr3_avg_occ = 3.25
 
         # should skims be read from sqlite database or recalculated?

@@ -96,22 +96,8 @@ def incremental_demand_main():
     # initialize configuration data
     resources = config.Config()
 
-    # parse command line options to get base and build database file locations
-    parser = argparse.ArgumentParser(description='Perform incremental logit bike mode shift model')
-    parser.add_argument('--type') #ignore here
-    parser.add_argument('--base',dest='base',action='store')
-    parser.add_argument('--build',dest='build',action='store')
-    parser.add_argument('--base_disk',help='read base skims from disk to speed up incremental demand',action='store_true')
-    args = parser.parse_args()
-    if args.base:
-        resources.application_config.base_sqlite_file = args.base
-    if args.build:
-        resources.application_config.build_sqlite_file = args.build
-
-    resources.application_config.read_base_skims_from_disk = args.base_disk
-
     # store number of zones
-    nzones = resources.application_config.num_zones
+    max_zone = resources.application_config.max_zone + 1
 
     # read network data
     base_net = network.Network(resources.network_config,resources.application_config.base_sqlite_file)
@@ -122,12 +108,12 @@ def incremental_demand_main():
     add_derived_network_attributes(build_net,resources)
 
     # read taz data and create taz node and county equivalency dictionaries
-    taz_data =  read_taz_from_sqlite(resources)
-    taz_nodes ={}
+    taz_data = read_taz_from_sqlite(resources)
+    taz_nodes = {}
     taz_county = {}
     for taz in taz_data:
-        taz_nodes[taz] = taz_data[taz]['node']
-        taz_county[taz] = taz_data[taz]['county']
+        taz_nodes[taz] = taz_data[taz][resources.application_config.taz_node_column]
+        taz_county[taz] = taz_data[taz][resources.application_config.taz_county_column]
 
 
     # read base skims from disk or perform path searches
@@ -139,8 +125,8 @@ def incremental_demand_main():
     else:
         print('skimming base network...')
         # walk skims not needed for incremental model
-        # base_walk_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_walk,resources.mode_choice_config.max_cost_walk) * ( numpy.ones((nzones,nzones)) - numpy.diag(numpy.ones(nzones)) )
-        base_bike_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((nzones,nzones)) - numpy.diag(numpy.ones(nzones)) )
+        # base_walk_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_walk,resources.mode_choice_config.max_cost_walk) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
+        base_bike_skim = get_skim_matrix(base_net,taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
 
         print('writing results...')
         # walk skims not needed for incremental model
@@ -153,21 +139,21 @@ def incremental_demand_main():
         build_bike_skim = read_matrix_from_sqlite(resources,'bike_skim',resources.application_config.build_sqlite_file)
     else:
         print('skimming build network...')
-        build_bike_skim = get_skim_matrix(build_net,taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((nzones,nzones)) - numpy.diag(numpy.ones(nzones)) )
+        build_bike_skim = get_skim_matrix(build_net,taz_nodes,resources.mode_choice_config.route_varcoef_bike,resources.mode_choice_config.max_cost_bike) * ( numpy.ones((max_zone,max_zone)) - numpy.diag(numpy.ones(max_zone)) )
 
         # print('writing results...')
         output.write_matrix_to_sqlite(build_bike_skim,resources.application_config.build_sqlite_file,'bike_skim',['value'])
 
     # fix build walk skims to zero, not needed for incremental model
-    base_walk_skim = numpy.zeros((nzones,nzones))
-    build_walk_skim = numpy.zeros((nzones,nzones))
+    base_walk_skim = numpy.zeros((max_zone,max_zone))
+    build_walk_skim = numpy.zeros((max_zone,max_zone))
 
     # don't report zero divide in numpy arrayes
     numpy.seterr(divide='ignore',invalid='ignore')
 
     # # create 0-1 mask for santa clara zones
-    santa_clara_mask = numpy.zeros((nzones,nzones))
-    # for i in range(nzones):
+    santa_clara_mask = numpy.zeros((max_zone,max_zone))
+    # for i in range(max_zone):
     #     if taz_county[i] == resources.mode_choice_config.santa_clara_county_code:
     #         santa_clara_mask[i,:] = 1
     #
@@ -200,11 +186,11 @@ def incremental_demand_main():
             build_bike_util = 0.5 * (build_bike_util + numpy.transpose(build_bike_util))
 
         # create 0-1 availability matrices when skim > 0
-        walk_avail = (base_walk_skim > 0) + numpy.diag(numpy.ones(nzones))
+        walk_avail = (base_walk_skim > 0) + numpy.diag(numpy.ones(max_zone))
         if resources.mode_choice_config.trip_tables[idx]!='nhbtrip':
-            bike_avail = (base_bike_skim > 0) * numpy.transpose(base_bike_skim > 0)  + numpy.diag(numpy.ones(nzones))
+            bike_avail = (base_bike_skim > 0) * numpy.transpose(base_bike_skim > 0)  + numpy.diag(numpy.ones(max_zone))
         else:
-            bike_avail = (base_bike_skim > 0) + numpy.diag(numpy.ones(nzones))
+            bike_avail = (base_bike_skim > 0) + numpy.diag(numpy.ones(max_zone))
 
         # non-available gets extreme negative utility
         base_bike_util = bike_avail * base_bike_util - 999 * ( 1 - bike_avail )
@@ -227,7 +213,7 @@ def incremental_demand_main():
         print(int(numpy.sum(total_trips)), int(numpy.sum(motorized_trips)), int(numpy.sum(walk_trips)), int(numpy.sum(bike_trips)))
 
         # calculate logit denominator
-        denom = ( motorized_trips  + walk_trips * numpy.exp( build_walk_util - base_walk_util ) + bike_trips * numpy.exp( build_bike_util - base_bike_util ) )
+        denom = (motorized_trips + walk_trips * numpy.exp(build_walk_util - base_walk_util) + bike_trips * numpy.exp( build_bike_util - base_bike_util ) )
 
         # perform incremental logit
         build_motor_trips = total_trips * numpy.nan_to_num( motorized_trips / denom )

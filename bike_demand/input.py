@@ -3,65 +3,56 @@ import sqlite3
 import time
 
 import numpy as np
+import pandas as pd
 
 from . import (choice_set, network, config, output)
 
 def read_taz_from_sqlite(config):
 
-    result = {}
-
     # open database cursor
     database_connection = sqlite3.connect(config.application_config.base_sqlite_file)
-    database_connection.row_factory  = sqlite3.Row
-    database_cursor = database_connection.cursor()
 
-    # execute select of link table
-    database_cursor.execute('select * from ' + config.application_config.taz_table_name)
+    taz_df = pd.read_sql('select * from ' + config.application_config.taz_table_name,
+                         database_connection,
+                         index_col=config.application_config.taz_taz_column,
+                         columns=[config.application_config.taz_node_column,
+                                  config.application_config.taz_county_column])
 
-    # loop over database records
-    while True:
-
-        # get next record
-        row = database_cursor.fetchone()
-
-        if row is None:
-            # if no more records we're done
-            break
-        else:
-            taz = row[list(row.keys()).index(config.application_config.taz_taz_column)]
-            node = row[list(row.keys()).index(config.application_config.taz_node_column)]
-            county = row[list(row.keys()).index(config.application_config.taz_county_column)]
-            result[taz] =  {'node': node, 'county': county}
-
-    return result
+    return taz_df.T.to_dict()
 
 
-def read_matrix_from_sqlite(config,table_name,sqlite_file):
+def read_matrix_from_sqlite(config, table_name, sqlite_file):
 
     # open database cursor
     database_connection = sqlite3.connect(sqlite_file)
-    database_cursor = database_connection.cursor()
 
-    # execute select of link table
-    database_cursor.execute('select * from ' + table_name)
+    matrix_df = pd.read_sql('select * from ' + table_name,
+                            database_connection,
+                            index_col=['ataz', 'ptaz'])
 
-    rows = database_cursor.fetchall()
-    if len(rows) == 0:
+    atazs = matrix_df.index.get_level_values('ataz')
+    ptazs = matrix_df.index.get_level_values('ptaz')
+
+    if matrix_df.shape[0] == 0:
         return np.array([])
 
-    if len(rows[0])>3:
-        dim = (config.application_config.num_zones,config.application_config.num_zones,len(rows[0])-2)
+    matrix_dim = max(list(atazs) + list(ptazs)) + 1
+
+    if matrix_df.shape[1] > 1:
+        dim = (matrix_dim, matrix_dim, matrix_df.shape[1])
     else:
-        dim = (config.application_config.num_zones,config.application_config.num_zones)
+        dim = (matrix_dim, matrix_dim)
 
     trip_matrix = np.zeros(dim)
 
-    if len(rows[0])>3:
-        for row in rows:
-            trip_matrix[row[0],row[1],:] = row[2:]
+    if matrix_df.shape[1] > 1:
+        trip_matrix[atazs, ptazs, :] = matrix_df.iloc[:, 0:].to_numpy()
+        # for row in rows:
+        #     trip_matrix[row[0],row[1],:] = row[2:]
     else:
-        for row in rows:
-            trip_matrix[row[0],row[1]] = row[2]
+        atazs = matrix_df.index.get_level_values(0)
+        ptazs = matrix_df.index.get_level_values(1)
+        trip_matrix[atazs, ptazs] = matrix_df.iloc[:, 0].to_numpy()
 
     return trip_matrix
 
