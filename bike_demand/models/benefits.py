@@ -6,11 +6,10 @@ from activitysim.core.config import (
     data_file_path,
     read_model_settings)
 
-from . import (network, output)
-from .input import read_taz_from_sqlite, read_matrix_from_sqlite
+from ..utils import (network, output)
+from ..utils.input import read_taz_from_sqlite, read_matrix_from_sqlite
 
 
-@inject.step()
 def benefits():
     # initialize configuration data
     trips_settings = read_model_settings('trips.yaml')

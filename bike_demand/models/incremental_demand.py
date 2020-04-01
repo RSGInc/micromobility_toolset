@@ -7,11 +7,10 @@ from activitysim.core.config import (
     data_file_path,
     read_model_settings)
 
-from . import (network, output)
-from .input import read_taz_from_sqlite, read_matrix_from_sqlite
+from ..utils import (network, output)
+from ..utils.input import read_taz_from_sqlite, read_matrix_from_sqlite
 
 
-@inject.step()
 def incremental_demand():
     # initialize configuration data
     network_settings = read_model_settings('network.yaml')
@@ -326,4 +325,4 @@ def add_derived_network_attributes(net, coef_walk, coef_bike):
 
 
 if __name__ == '__main__':
-    incremental_demand_main()
+    incremental_demand()

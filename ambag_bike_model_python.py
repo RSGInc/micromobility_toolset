@@ -1,18 +1,16 @@
 import argparse
-import time
 
 from activitysim.core import pipeline
 from activitysim.core import inject
 from activitysim.core.config import setting
 
-from bike_demand import incremental_demand
-from bike_demand import benefits
-from bike_demand import assign_demand
+from bike_demand.models import (
+    incremental_demand,
+    benefits,
+    assign_demand)
 
 
 def run():
-
-    t1 = time.time()
 
     models = [
         'initial_demand',
@@ -29,14 +27,16 @@ def run():
     inject.add_injectable('data_dir', 'ambag_example/data')
     inject.add_injectable('output_dir', 'ambag_example/output')
 
+    inject.add_step('incremental_demand', incremental_demand)
+    inject.add_step('benefits', benefits)
+    inject.add_step('assign_demand', assign_demand)
+
     if args.type:
         pipeline.run(models=[args.type])
     else:
         pipeline.run(models=setting('models'))
 
     pipeline.close_pipeline()
-
-    print('runtime: ', time.time() - t1)
 
 
 if __name__ == '__main__':

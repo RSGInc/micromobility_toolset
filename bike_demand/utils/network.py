@@ -628,8 +628,8 @@ class Network():
 
         # num_zones = len(taz_nodes)
         # print(num_zones)
-        max_taz = max(taz_nodes.keys())
-        skim_matrix = np.zeros((max_taz+1, max_taz+1))
+        max_taz = max(taz_nodes.keys()) + 1
+        skim_matrix = np.zeros((max_taz, max_taz))
 
         for i in taz_nodes.keys():
 
@@ -642,3 +642,21 @@ class Network():
                     skim_matrix[i, j] = costs[taz_nodes[j]]
 
         return skim_matrix
+
+    def load_trip_matrix(self, trips, load_name, taz_nodes, varcoef, max_cost=None):
+
+        max_taz = max(taz_nodes.keys()) + 1
+
+        for i in taz_nodes.keys():
+
+            centroid = taz_nodes[i]
+            paths = self.single_source_dijkstra(centroid, varcoef, max_cost=max_cost)[1]
+
+            for j in taz_nodes.keys():
+
+                target = taz_nodes[j]
+
+                if target in paths and trips[i,j] > 0:
+                    for k in range(len(paths[target])-1):
+                        edge = (paths[target][k],paths[target][k+1])
+                        self.set_edge_attribute_value(edge,load_name,trips[i,j]+self.get_edge_attribute_value(edge,load_name))
