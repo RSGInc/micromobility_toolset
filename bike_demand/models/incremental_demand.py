@@ -105,7 +105,9 @@ def incremental_demand():
     print("\nperforming model calculations...")
 
     # loop over market segments
-    for table in trips_settings.get('trip_tables'):
+    for segment in trips_settings.get('segments'):
+
+        table = segment + trips_settings.get('trip_table_suffix')
 
         # read base trip table into matrix
         base_trips = read_matrix_from_sqlite(
@@ -132,7 +134,7 @@ def incremental_demand():
 
         # create 0-1 availability matrices when skim > 0
         walk_avail = (base_walk_skim > 0) + np.diag(np.ones(max_zone))
-        if table !='nhbtrip':
+        if table != 'nhbtrip':
             bike_avail = (base_bike_skim > 0) * np.transpose(base_bike_skim > 0)  + np.diag(np.ones(max_zone))
         else:
             bike_avail = (base_bike_skim > 0) + np.diag(np.ones(max_zone))
@@ -152,7 +154,7 @@ def incremental_demand():
 
         # log base trips to console
         print('')
-        print(('segment ' + table))
+        print(('segment ' + segment))
         print('base trips')
         print('total motorized walk bike')
         print(int(np.sum(total_trips)), int(np.sum(motorized_trips)), int(np.sum(walk_trips)), int(np.sum(bike_trips)))

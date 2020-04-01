@@ -35,7 +35,9 @@ def benefits():
     print('calculating vmt, emissions, and user benefits...')
 
     # loop over market segments
-    for table in trips_settings.get('trip_tables'):
+    for segment in trips_settings.get('segments'):
+
+        table = segment + trips_settings.get('trip_table_suffix')
 
         # read in trip tables
         base_trips = read_matrix_from_sqlite(

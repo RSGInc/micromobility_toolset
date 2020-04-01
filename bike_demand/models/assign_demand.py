@@ -45,7 +45,9 @@ def assign_demand():
     total_demand = np.zeros((max_zone, max_zone))
 
     print('getting demand matrices...')
-    for table in trips_settings.get('trip_tables'):
+    for segment in trips_settings.get('segments'):
+
+        table = segment + trips_settings.get('trip_table_suffix')
 
         base_trips = read_matrix_from_sqlite(
             base_sqlite_file, table,
