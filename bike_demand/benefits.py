@@ -1,87 +1,93 @@
-import csv
-import sqlite3
-import numpy
-import time
-import argparse
+import numpy as np
 
-from . import (choice_set, network, config, output)
-from .input import *
+from activitysim.core import inject
+from activitysim.core.config import (
+    setting,
+    data_file_path,
+    read_model_settings)
 
-def benefits_main():
+from . import (network, output)
+from .input import read_taz_from_sqlite, read_matrix_from_sqlite
 
-    # read configuration data
-    resources = config.Config()
 
-    # parse command line options to get base and build database file locations
-    parser = argparse.ArgumentParser(description='Perform benefits calculation for bike mode shift model')
-    parser.add_argument('--type') #ignore here
-    parser.add_argument('--base',dest='base',action='store')
-    parser.add_argument('--build',dest='build',action='store')
-    parser.add_argument('--base_disk',help='read base skims from disk to speed up incremental demand',action='store_true') #happens to be irrelevant for benefits
-    args = parser.parse_args()
-    if args.base:
-        resources.application_config.base_sqlite_file = args.base
-    if args.build:
-        resources.application_config.build_sqlite_file = args.build
+@inject.step()
+def benefits():
+    # initialize configuration data
+    trips_settings = read_model_settings('trips.yaml')
 
     # get number of zones to dimension matrices
-    nzones = resources.application_config.num_zones
+    max_zone = setting('max_zone') + 1
+
+    base_sqlite_file = data_file_path(setting('base_sqlite_file'))
+    build_sqlite_file = data_file_path(setting('build_sqlite_file'))
 
     # read auto times and distances
-    auto_skim = read_matrix_from_sqlite(resources,'auto_skim',resources.application_config.base_sqlite_file)
+    auto_skim = read_matrix_from_sqlite(
+        base_sqlite_file, 'auto_skim', 'i', 'j')
 
     # initialize empty matrices
-    delta_trips = numpy.zeros((nzones,nzones,len(resources.mode_choice_config.modes)))
-    user_ben = numpy.zeros((nzones,nzones))
+    delta_trips = np.zeros((max_zone, max_zone, len(trips_settings.get('modes'))))
+    user_ben = np.zeros((max_zone, max_zone))
 
-    # ignore numpy divide by zero errors
-    numpy.seterr(divide='ignore',invalid='ignore')
+    # ignore np divide by zero errors
+    np.seterr(divide='ignore', invalid='ignore')
 
     print('')
     print('calculating vmt, emissions, and user benefits...')
 
     # loop over market segments
-    for idx in range(len(resources.mode_choice_config.trip_tables)):
+    for table in trips_settings.get('trip_tables'):
 
         # read in trip tables
-        base_trips = read_matrix_from_sqlite(resources,resources.mode_choice_config.trip_tables[idx],resources.application_config.base_sqlite_file)
-        build_trips = read_matrix_from_sqlite(resources,resources.mode_choice_config.trip_tables[idx],resources.application_config.build_sqlite_file)
+        base_trips = read_matrix_from_sqlite(
+            base_sqlite_file, table,
+            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
+
+        build_trips = read_matrix_from_sqlite(
+            build_sqlite_file, table,
+            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
 
         if base_trips.size == 0 or build_trips.size == 0:
-            print('%s is empty or missing' % resources.mode_choice_config.trip_tables[idx])
+            print('%s is empty or missing' % table)
             continue
 
         # calculate difference in trips
         delta_trips = delta_trips + build_trips - base_trips
 
-        # aalculate logsums
-        base_logsum = numpy.log(1.0 + numpy.nan_to_num(base_trips[:,:,6]/(numpy.sum(base_trips,2)-base_trips[:,:,6])))
-        build_logsum = numpy.log(1.0 + numpy.nan_to_num(build_trips[:,:,6]/(numpy.sum(build_trips,2)-build_trips[:,:,6])))
+        # calculate logsums
+        base_logsum = np.log(1.0 + np.nan_to_num(base_trips[:, :, 6] /
+                            (np.sum(base_trips, 2) - base_trips[:, :, 6])))
+        build_logsum = np.log(1.0 + np.nan_to_num(build_trips[:, :, 6] /
+                              (np.sum(build_trips, 2) - build_trips[:, :, 6])))
 
         # calculate user benefits
-        user_ben = user_ben - numpy.sum(base_trips,2) * (build_logsum - base_logsum)/resources.mode_choice_config.ivt_coef[idx]
+        user_ben = user_ben - np.sum(base_trips, 2) * \
+            (build_logsum - base_logsum) / trips_settings.get('ivt_coef')[table]
 
     # calculate difference in vmt and vehicle minutes of travel
-    delta_minutes = auto_skim[:,:,0] * (delta_trips[:,:,0] + delta_trips[:,:,1] /2.0 + delta_trips[:,:,2] /resources.application_config.sr3_avg_occ)
-    delta_miles = auto_skim[:,:,1] * (delta_trips[:,:,0] + delta_trips[:,:,1] /2.0 + delta_trips[:,:,2] /resources.application_config.sr3_avg_occ)
+    delta_minutes = auto_skim[:, :, 0] * (delta_trips[:, :, 0] +
+        delta_trips[:, :, 1] / 2.0 + delta_trips[:, :, 2] / setting('sr3_avg_occ'))
+    delta_miles = auto_skim[:, :, 1] * (delta_trips[:, :, 0] +
+        delta_trips[:, :, 1] / 2.0 + delta_trips[:, :, 2] / setting('sr3_avg_occ'))
 
     print('')
-    print('User benefits (min.): ', int(numpy.sum(user_ben)))
-    print('Change in bike trips: ', int(numpy.sum(delta_trips[:,:,6])))
-    print('Change in VMT: ', int(numpy.sum(delta_miles)))
+    print('User benefits (min.): ', int(np.sum(user_ben)))
+    print('Change in bike trips: ', int(np.sum(delta_trips[:, :, 6])))
+    print('Change in VMT: ', int(np.sum(delta_miles)))
 
     # calculate difference in pollutants
-    delta_pollutants = numpy.zeros((nzones,nzones,len(resources.application_config.pollutants)))
-    for idx in range(len(resources.application_config.pollutants)):
-        delta_pollutants[:,:,idx] = delta_miles * resources.application_config.grams_per_mile + delta_minutes * resources.application_config.grams_per_minute
-        print('Change in g. ' + resources.application_config.pollutants[idx] + ': ', int(numpy.sum(delta_pollutants[:,:,idx])))
+    delta_pollutants = np.zeros((max_zone, max_zone, len(setting('pollutants').keys())))
+    for idx, pollutant in enumerate(setting('pollutants').items()):
+        delta_pollutants[:, :, idx] = delta_miles * pollutant[1]['grams_per_mile'] + \
+            delta_minutes * pollutant[1]['grams_per_minute']
+        print('Change in g. ' + pollutant[0] + ': ', int(np.sum(delta_pollutants[:, :, idx])))
 
     print('')
-    print('writing to disk...')
-    output.write_matrix_to_sqlite(user_ben,resources.application_config.build_sqlite_file,'user_ben',['minutes'])
-    output.write_matrix_to_sqlite(delta_trips,resources.application_config.build_sqlite_file,'chg_trips',resources.mode_choice_config.modes)
-    output.write_matrix_to_sqlite(delta_miles,resources.application_config.build_sqlite_file,'chg_vmt',['value'])
-    output.write_matrix_to_sqlite(delta_pollutants,resources.application_config.build_sqlite_file,'chg_emissions',resources.application_config.pollutants)
+    # print('writing to disk...')
+    # output.write_matrix_to_sqlite(user_ben,resources.application_config.build_sqlite_file,'user_ben',['minutes'])
+    # output.write_matrix_to_sqlite(delta_trips,resources.application_config.build_sqlite_file,'chg_trips',resources.mode_choice_config.modes)
+    # output.write_matrix_to_sqlite(delta_miles,resources.application_config.build_sqlite_file,'chg_vmt',['value'])
+    # output.write_matrix_to_sqlite(delta_pollutants,resources.application_config.build_sqlite_file,'chg_emissions',resources.application_config.pollutants)
 
 if __name__ == '__main__':
-    benefits_main()
+    benefits()
