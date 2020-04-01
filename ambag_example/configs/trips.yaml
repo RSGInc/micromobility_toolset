@@ -45,7 +45,6 @@ ivt_coef:
 
 walk_skim_coef: -0.712
 bike_skim_coef: -0.182
-bike_dist_coef_santa_clara: -0.154
 
 # generalized cost coefficients for bike skimming
 route_varcoef_bike:

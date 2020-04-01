@@ -67,16 +67,6 @@ def initial_demand():
 
     np.seterr(divide='ignore', invalid='ignore')
 
-    santa_clara_mask = np.zeros((max_zone, max_zone))
-    for i, taz in enumerate(taz_county.keys()):
-        if taz == trips_settings.get('santa_clara_county_code'):
-            santa_clara_mask[i, :] = 1
-
-    ucsc_attr_mask = np.zeros((max_zone, max_zone))
-    ucsc_attr_mask[:, trips_settings.get('ucsc_taz')] = 1.0
-
-    base_bike_skim = santa_clara_mask * base_walk_skim + (1-santa_clara_mask) * base_bike_skim
-
     print('performing model calculations...')
     for segment in trips_settings.get('segments'):
 
@@ -100,11 +90,7 @@ def initial_demand():
             print('\n%s is empty or missing' % motoutil_table)
             continue
 
-        base_bike_util = base_bike_skim * (santa_clara_mask *
-                                           trips_settings.get('bike_dist_coef_santa_clara') +
-                                           (1 - santa_clara_mask) *
-                                           trips_settings.get('bike_skim_coef'))
-
+        base_bike_util = base_bike_skim * trips_settings.get('bike_skim_coef')
         base_walk_util = base_walk_skim * trips_settings.get('walk_skim_coef')
 
         if segment != 'nhb':

@@ -22,6 +22,7 @@ def incremental_demand():
     # read network data
     base_sqlite_file = data_file_path(setting('base_sqlite_file'))
     build_sqlite_file = data_file_path(setting('build_sqlite_file'))
+
     base_net = network.Network(network_settings, base_sqlite_file)
     build_net = network.Network(network_settings, build_sqlite_file)
 
@@ -92,16 +93,6 @@ def incremental_demand():
     # don't report zero divide in np arrayes
     np.seterr(divide='ignore', invalid='ignore')
 
-    # # create 0-1 mask for santa clara zones
-    santa_clara_mask = np.zeros((max_zone, max_zone))
-    # for i in range(max_zone):
-    #     if taz_county[i] == resources.mode_choice_config.santa_clara_county_code:
-    #         santa_clara_mask[i,:] = 1
-    #
-    # # replace bike skim in santa clara with walk skim
-    # base_bike_skim = santa_clara_mask * base_walk_skim + (1-santa_clara_mask) * base_bike_skim
-    # build_bike_skim = santa_clara_mask * build_walk_skim + (1-santa_clara_mask) * build_bike_skim
-
     print("\nperforming model calculations...")
 
     # loop over market segments
@@ -118,13 +109,11 @@ def incremental_demand():
             print('\n%s is empty or missing' % table)
             continue
         # calculate base walk and bike utilities
-        base_bike_util = base_bike_skim * \
-                            (santa_clara_mask * trips_settings.get('bike_dist_coef_santa_clara') +\
-                                (1 - santa_clara_mask) * trips_settings.get('bike_skim_coef'))
+        base_bike_util = base_bike_skim * trips_settings.get('bike_skim_coef')
         base_walk_util = base_walk_skim * trips_settings.get('walk_skim_coef')
 
         # calculate build walk and bike utilities
-        build_bike_util = build_bike_skim * ( santa_clara_mask * trips_settings.get('bike_dist_coef_santa_clara') + (1 - santa_clara_mask) * trips_settings.get('bike_skim_coef'))
+        build_bike_util = build_bike_skim * trips_settings.get('bike_skim_coef')
         build_walk_util = build_walk_skim * trips_settings.get('walk_skim_coef')
 
         # if not nhb, average PA and AP bike utilities
