@@ -47,7 +47,7 @@ def assign_demand():
     print('getting demand matrices...')
     for table in trips_settings.get('trip_tables'):
 
-        base_trips = base_trips = read_matrix_from_sqlite(
+        base_trips = read_matrix_from_sqlite(
             base_sqlite_file, table,
             trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
 
