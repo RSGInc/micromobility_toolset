@@ -6,12 +6,29 @@ import pandas as pd
 
 class Skim():
 
-    def __init__(self, data, mapping=None,
-                 orig_col=None, dest_col=None,
-                 col_names=None):
+    def __init__(self, data, **kwargs):
         """
         data: numpy array or pandas DataFrame
-        mapping: mapping of matrix indices to id numbers
+        """
+
+        if isinstance(data, np.ndarray):
+            self.from_numpy(data, **kwargs)
+
+        elif isinstance(data, pd.DataFrame):
+            self.from_dataframe(data, **kwargs)
+
+        else:
+            raise TypeError('data must be a numpy array or pandas DataFrame')
+
+    def from_numpy(self, data, mapping=None,
+                   orig_col=None, dest_col=None,
+                   col_names=None):
+        """
+        data: 2- or 3- dimensional numpy array
+        mapping: listlike of matrix index ids (int)
+        orig_col: str, name of 1st dimension
+        dest_col: str, name of 2nd dimension
+        col_names: list of str, names for higher dimensions
         """
 
         if not len(data.shape) in [2, 3]:
@@ -24,22 +41,79 @@ class Skim():
         self._matrix = data
         self._length = data.shape[0]
 
-        self.set_mapping(mapping)
+        self._set_mapping(mapping)
         self._set_num_cols()
-        self.set_col_names(col_names)
+        self._set_col_names(col_names)
 
-    def set_mapping(self, mapping):
+    def from_dataframe(self, data, mapping=None,
+                       orig_col=None, dest_col=None,
+                       col_names=None):
+
+        if isinstance(data.index, pd.MultiIndex):
+            # FIX: what if the index names already exist?
+            data.index.names = [orig_col, dest_col]
+
+        else:
+            # FIX: avoid expensive reindexing?
+            data.set_index([orig_col, dest_col], inplace=True)
+
+        o_vals = data.index.get_level_values(0)
+        d_vals = data.index.get_level_values(1)
+
+        index_vals = sorted(list(set(list(o_vals) + list(d_vals))))
+
+        if mapping:
+            if not all(i in mapping for i in index_vals):
+                raise IndexError('DataFrame index is incomplete')
+
+        else:
+            mapping = index_vals
+
+        # if matrix_df.shape[0] == 0:
+        #     return np.array([])
+
+        matrix_length = len(mapping)
+
+        if col_names:
+            data = data[col_names]
+
+        else:
+            col_names = list(data.columns)
+
+        if data.shape[1] > 1:
+            dim = (matrix_length, matrix_length, data.shape[1])
+        else:
+            dim = (matrix_length, matrix_length)
+
+        np_matrix = np.zeros(dim)
+
+        o_index = [mapping.index(i) for i in o_vals]
+        d_index = [mapping.index(i) for i in d_vals]
+
+        if data.shape[1] > 1:
+            np_matrix[o_index, d_index, :] = data.iloc[:, 0:].to_numpy()
+        else:
+            np_matrix[o_index, d_index] = data.iloc[:, 0].to_numpy()
+
+        self._matrix = np_matrix
+        self._length = matrix_length
+
+        self._set_mapping(mapping)
+        self._set_num_cols()
+        self._set_col_names(col_names)
+
+    def _set_mapping(self, mapping):
 
         # TODO: make sure map is all ints
         if not mapping:
-            self.mapping = np.arange(self._length)
+            self._mapping = np.arange(self._length)
 
-        elif isinstance(mapping, list):
+        elif isinstance(mapping, list) or isinstance(mapping, np.ndarray):
             if not len(mapping) == self._length:
                 raise IndexError('mapping of %s items cannot be applied to matrix '
                                  'with shape %s' % (len(mapping), str(self._matrix.shape)))
 
-            self.mapping = np.array(mapping)
+            self._mapping = np.array(mapping)
 
         else:
             raise TypeError('int or list for now')
@@ -51,7 +125,7 @@ class Skim():
         else:
             self._num_cols = self._matrix.shape[2]
 
-    def set_col_names(self, col_names):
+    def _set_col_names(self, col_names):
 
         if not col_names:
             self.col_names = None
@@ -70,8 +144,8 @@ class Skim():
     def to_dataframe(self):
 
         multi_index = [
-            np.repeat(self.mapping, self._length),
-            np.tile(self.mapping, self._length)]
+            np.repeat(self._mapping, self._length),
+            np.tile(self._mapping, self._length)]
 
         data = self._matrix.reshape(self._length ** 2, self._num_cols)
 
@@ -91,41 +165,28 @@ class Skim():
         pass
 
     @classmethod
-    def from_sqlite(cls, sqlite_file, table_name, orig_col, dest_col, columns=None):
+    def from_sqlite(cls, sqlite_file, table_name,
+                    orig_col, dest_col,
+                    col_names=None):
         # TODO: close file with a finally
         # return cls(np.random.randn(2, 2))
 
         # open database cursor
         db_connection = sqlite3.connect(sqlite_file)
 
-        matrix_df = pd.read_sql('select * from ' + table_name,
-                                database_connection,
-                                index_col=[orig_col, dest_col],
-                                columns=columns)
+        try:
+            matrix_df = pd.read_sql('select * from ' + table_name,
+                                    db_connection,
+                                    index_col=[orig_col, dest_col],
+                                    columns=col_names)
 
-        db_connection.close()
+            return cls(matrix_df,
+                       orig_col=orig_col,
+                       dest_col=dest_col,
+                       col_names=col_names)
 
-        atazs = matrix_df.index.get_level_values(orig_col)
-        ptazs = matrix_df.index.get_level_values(dest_col)
-
-        if matrix_df.shape[0] == 0:
-            return np.array([])
-
-        matrix_dim = max(list(atazs) + list(ptazs)) + 1
-
-        if matrix_df.shape[1] > 1:
-            dim = (matrix_dim, matrix_dim, matrix_df.shape[1])
-        else:
-            dim = (matrix_dim, matrix_dim)
-
-        trip_matrix = np.zeros(dim)
-
-        if matrix_df.shape[1] > 1:
-            trip_matrix[atazs, ptazs, :] = matrix_df.iloc[:, 0:].to_numpy()
-        else:
-            trip_matrix[atazs, ptazs] = matrix_df.iloc[:, 0].to_numpy()
-
-        return trip_matrix
+        finally:
+            db_connection.close()
 
     @classmethod
     def from_omx(cls):
@@ -135,12 +196,23 @@ class Skim():
 if __name__ == '__main__':
 
     np.random.seed(123)
-    matrix = np.random.randn(4, 4, 3)
+    matrix = np.random.randn(4, 4, 2)
 
-    print(matrix.shape)
-    skim = Skim(matrix, mapping=[2, 4, 6, 8])
+    # print(matrix)
+    # skim = Skim(matrix, mapping=[2, 4, 6, 8], col_names=['time', 'dist'])
+    #
+    # # print(skim.to_numpy())
+    # df = skim.to_dataframe()
+    # print(df)
 
-    # print(skim.to_numpy())
-    print(skim.to_dataframe())
+    sqlite_file = 'ambag_example/data/example.db'
+    skim = Skim.from_sqlite(sqlite_file, 'auto_skim', 'i', 'j')
+    print(type(skim))
+    df = skim.to_dataframe()
+    print(df.head())
+    print(df.shape)
+
+    # new_skim = Skim(df, mapping=[3, 5, 6, 1])
+    # print(new_skim.to_dataframe())
     # skim = Skim.from_sqlite()
-    print(skim.to_numpy())
+    # print(skim.to_numpy())
