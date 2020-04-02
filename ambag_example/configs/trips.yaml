@@ -67,7 +67,7 @@ route_varcoef_walk:
     bike_exclude: 999.0
     thru_centroid: 999.0
 
-# modes in order of columns in sqlite database  tables
+# modes in order of columns in sqlite database tables
 modes:
     - da
     - s2
@@ -123,16 +123,3 @@ bike_asc:
 # more coefficients
 walk_intrazonal: -0.613
 bike_intrazonal: -1.720
-walk_santa_clara: 0.378
-walk_santa_clara_intrazonal: -1.985
-bike_santa_clara: -0.982
-bike_santa_clara_intrazonal: 0.775
-
-# county code for Santa Clara in taz table
-santa_clara_county_code: 85
-
-# reduction of motorized utility for UCSC
-motorized_ucsc_attr: -0.0
-
-# taz of UCSC
-ucsc_taz: 34
