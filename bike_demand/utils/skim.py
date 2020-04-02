@@ -63,8 +63,14 @@ class Skim():
         index_vals = sorted(list(set(list(o_vals) + list(d_vals))))
 
         if mapping:
-            if not all(i in mapping for i in index_vals):
-                raise IndexError('DataFrame index is incomplete')
+            if not all(i in index_vals for i in mapping):
+                raise IndexError('DataFrame index is incomplete for given mapping')
+
+            # only retrieve rows from mapping
+            o_vals = [val for val in o_vals if val in mapping]
+            d_vals = [val for val in d_vals if val in mapping]
+
+            data = data.reindex([o_vals, d_vals], copy=False, fill_value=0)
 
         else:
             mapping = index_vals
@@ -160,14 +166,31 @@ class Skim():
         # also need to close file with a finally
         pass
 
-    def to_sqlite(self, filename):
-        # TODO: close file with a finally
+    def to_sqlite(self, filename, table_name, **kwargs):
+
+        db_connection = sqlite3.connect(filename)
+
+        try:
+            self.to_dataframe().to_sql(name=table_name,
+                                       con=db_connection,
+                                       **kwargs)
+
+        finally:
+            db_connection.close()
+
+    def to_csv(self, filename, **kwargs):
+
+        self.to_dataframe().to_csv(filename, **kwargs)
+
+    @classmethod
+    def from_omx(cls):
         pass
 
     @classmethod
     def from_sqlite(cls, sqlite_file, table_name,
                     orig_col, dest_col,
-                    col_names=None):
+                    col_names=None,
+                    mapping=None):
         # TODO: close file with a finally
         # return cls(np.random.randn(2, 2))
 
@@ -183,14 +206,27 @@ class Skim():
             return cls(matrix_df,
                        orig_col=orig_col,
                        dest_col=dest_col,
-                       col_names=col_names)
+                       col_names=col_names,
+                       mapping=mapping)
 
         finally:
             db_connection.close()
 
     @classmethod
-    def from_omx(cls):
-        pass
+    def from_csv(cls, csv_file,
+                 orig_col, dest_col,
+                 col_names=None,
+                 mapping=None):
+
+        matrix_df = pd.read_csv(csv_file,
+                                index_col=[orig_col, dest_col],
+                                usecols=col_names)
+
+        return cls(matrix_df,
+                   orig_col=orig_col,
+                   dest_col=dest_col,
+                   col_names=col_names,
+                   mapping=mapping)
 
 
 if __name__ == '__main__':
@@ -206,11 +242,16 @@ if __name__ == '__main__':
     # print(df)
 
     sqlite_file = 'ambag_example/data/example.db'
-    skim = Skim.from_sqlite(sqlite_file, 'auto_skim', 'i', 'j')
+    # sqlite_file = 'new_path_coef.db'
+    # partial_mapping = [649, 652, 658, 660, 661, 663, 690, 691, 710, 714, 736, 741, 759, 1079, 1080, 1081, 1084, 1085, 1088, 1126]
+    # skim = Skim.from_sqlite(sqlite_file, 'auto_skim', 'i', 'j', mapping=partial_mapping)
+
+    skim = Skim.from_csv('ambag_example/data/nhbtrip.csv', 'ataz', 'ptaz')
     print(type(skim))
     df = skim.to_dataframe()
     print(df.head())
     print(df.shape)
+    print(skim.to_numpy().shape)
 
     # new_skim = Skim(df, mapping=[3, 5, 6, 1])
     # print(new_skim.to_dataframe())

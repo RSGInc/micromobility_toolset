@@ -87,7 +87,7 @@ def initial_demand():
             trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
 
         if base_motor_util.size == 0:
-            print('\n%s is empty or missing' % motoutil_table)
+            print('\n%s is empty or missing' % motutil_table)
             continue
 
         base_bike_util = base_bike_skim * trips_settings.get('bike_skim_coef')
