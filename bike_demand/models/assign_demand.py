@@ -10,7 +10,7 @@ from activitysim.core.config import (
     read_model_settings)
 
 from ..utils import (network, output)
-from ..utils.input import read_taz_from_sqlite, read_matrix_from_sqlite
+from ..utils.input import read_taz, read_matrix
 
 
 def assign_demand():

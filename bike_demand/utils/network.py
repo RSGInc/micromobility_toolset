@@ -626,10 +626,8 @@ class Network():
         until max_cost is reached, return matrix
         """
 
-        # num_zones = len(taz_nodes)
-        # print(num_zones)
-        max_taz = max(taz_nodes.keys()) + 1
-        skim_matrix = np.zeros((max_taz, max_taz))
+        nzones = len(taz_nodes)
+        skim_matrix = np.zeros((nzones, nzones))
 
         for i in taz_nodes.keys():
 
@@ -639,7 +637,8 @@ class Network():
             for j in taz_nodes.keys():
 
                 if taz_nodes[j] in costs:
-                    skim_matrix[i, j] = costs[taz_nodes[j]]
+                    skim_matrix[list(taz_nodes.keys()).index(i),
+                                list(taz_nodes.keys()).index(j)] = costs[taz_nodes[j]]
 
         return skim_matrix
 

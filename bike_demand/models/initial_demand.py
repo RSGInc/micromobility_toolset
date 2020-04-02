@@ -1,23 +1,19 @@
 import numpy as np
 
-from activitysim.core import inject
 from activitysim.core.config import (
     setting,
     data_file_path,
     output_file_path,
     read_model_settings)
 
-from ..utils import (network, output)
-from ..utils.input import read_taz_from_sqlite, read_matrix_from_sqlite
+from ..utils import network
+from ..utils.input import read_taz, read_matrix
 
 
 def initial_demand():
     # initialize configuration data
     network_settings = read_model_settings('network.yaml')
     trips_settings = read_model_settings('trips.yaml')
-
-    # store number of zones
-    max_zone = setting('max_zone') + 1
 
     # read network data
     base_sqlite_file = data_file_path(setting('base_sqlite_file'))
@@ -27,11 +23,9 @@ def initial_demand():
 
     add_derived_network_attributes(base_net)
 
-    taz_data = read_taz_from_sqlite(base_sqlite_file,
-                                    setting('taz_table_name'),
-                                    index_col=setting('taz_table_name'),
-                                    columns=[setting('taz_node_column'),
-                                             setting('taz_county_column')])
+    taz_data = read_taz()
+
+    nzones = len(taz_data)
 
     taz_nodes = {}
     taz_county = {}
@@ -50,16 +44,16 @@ def initial_demand():
             trips_settings.get('route_varcoef_walk'),
             max_cost=trips_settings.get('max_cost_walk'))
 
-        base_walk_skim = base_walk_skim * (np.ones((max_zone, max_zone)) -
-                                           np.diag(np.ones(max_zone)))
+        base_walk_skim = base_walk_skim * (np.ones((nzones, nzones)) -
+                                           np.diag(np.ones(nzones)))
 
         base_bike_skim = base_net.get_skim_matrix(
             taz_nodes,
             trips_settings.get('route_varcoef_bike'),
             max_cost=trips_settings.get('max_cost_bike'))
 
-        base_bike_skim = base_bike_skim * (np.ones((max_zone, max_zone)) -
-                                           np.diag(np.ones(max_zone)))
+        base_bike_skim = base_bike_skim * (np.ones((nzones, nzones)) -
+                                           np.diag(np.ones(nzones)))
 
         print('writing results...')
         # output.write_matrix_to_sqlite(base_walk_skim,resources.application_config.base_sqlite_file,'walk_skim',['value'])
@@ -74,17 +68,13 @@ def initial_demand():
         motutil_table = segment + trips_settings.get('motorized_util_table_suffix')
 
         # read in trip tables
-        base_trips = read_matrix_from_sqlite(
-            base_sqlite_file, trip_table,
-            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
+        base_trips = read_matrix(trip_table, taz_list=list(taz_data.keys()))
 
         if base_trips.size == 0:
             print('\n%s is empty or missing' % trip_table)
             continue
 
-        base_motor_util = read_matrix_from_sqlite(
-            base_sqlite_file, motutil_table,
-            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
+        base_motor_util = read_matrix(motutil_table, taz_list=list(taz_data.keys()))
 
         if base_motor_util.size == 0:
             print('\n%s is empty or missing' % motutil_table)
@@ -96,16 +86,16 @@ def initial_demand():
         if segment != 'nhb':
             base_bike_util = 0.5 * (base_bike_util + np.transpose(base_bike_util))
 
-        base_motor_util = base_motor_util * (np.ones((max_zone, max_zone)) -
-                                             np.diag(np.ones(max_zone)))
+        base_motor_util = base_motor_util * (np.ones((nzones, nzones)) -
+                                             np.diag(np.ones(nzones)))
 
         base_bike_util = base_bike_util + trips_settings.get('bike_asc')[segment]
         base_walk_util = base_walk_util + trips_settings.get('walk_asc')[segment]
         base_bike_util = base_bike_util + trips_settings.get('bike_intrazonal')
         base_walk_util = base_walk_util + trips_settings.get('walk_intrazonal')
 
-        bike_avail = (base_bike_skim > 0) + np.diag(np.ones(max_zone))
-        walk_avail = (base_walk_skim > 0) + np.diag(np.ones(max_zone))
+        bike_avail = (base_bike_skim > 0) + np.diag(np.ones(nzones))
+        walk_avail = (base_walk_skim > 0) + np.diag(np.ones(nzones))
 
         base_bike_util = base_bike_util - 999 * (1 - bike_avail)
         base_walk_util = base_walk_util - 999 * (1 - walk_avail)

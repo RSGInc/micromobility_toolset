@@ -1,14 +1,13 @@
 import argparse
 import numpy as np
 
-from activitysim.core import inject
 from activitysim.core.config import (
     setting,
     data_file_path,
     read_model_settings)
 
 from ..utils import (network, output)
-from ..utils.input import read_taz_from_sqlite, read_matrix_from_sqlite
+from ..utils.input import read_taz, read_matrix
 
 
 def incremental_demand():

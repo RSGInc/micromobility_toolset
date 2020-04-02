@@ -63,8 +63,8 @@ class Skim():
         index_vals = sorted(list(set(list(o_vals) + list(d_vals))))
 
         if mapping:
-            if not all(i in index_vals for i in mapping):
-                raise IndexError('DataFrame index is incomplete for given mapping')
+            # if not all(i in index_vals for i in mapping):
+            #     raise IndexError('DataFrame index is incomplete for given mapping')
 
             # only retrieve rows from mapping
             o_vals = [val for val in o_vals if val in mapping]
@@ -191,8 +191,6 @@ class Skim():
                     orig_col, dest_col,
                     col_names=None,
                     mapping=None):
-        # TODO: close file with a finally
-        # return cls(np.random.randn(2, 2))
 
         # open database cursor
         db_connection = sqlite3.connect(sqlite_file)
