@@ -7,8 +7,6 @@ import pandas as pd
 
 from activitysim.core.config import data_file_path
 
-from .skim import Skim
-
 
 class Network():
 
@@ -74,54 +72,39 @@ class Network():
 
         """
 
-        # put desired attribute names into network data structure
-        self.adjacency_names = list(attributes_by_direction.keys())
-
-        columns = []
+        ab_columns = []
+        ba_columns = []
         for ab, ba in attributes_by_direction.values():
-            columns.append(ab)
-            columns.append(ba)
+            ab_columns.append(ab)
+            ba_columns.append(ba)
 
-        link_df = pd.read_csv(file_name,
-                              index_col=[from_name, to_name],
-                              usecols=columns + [from_name, to_name])
-        print(link_df.head())
+        link_df = pd.read_csv(file_name, usecols=ab_columns + ba_columns + [from_name, to_name])
 
-        # # loop over database records
-        # while True:
-        #
-        #     # get next record
-        #     row = database_cursor.fetchone()
-        #
-        #     if row is None:
-        #         # if no more records we're done
-        #         break
-        #     else:
-        #         # set up attribute value lists by direction
-        #         ab_attribute_values = []
-        #         ba_attribute_values = []
-        #
-        #         # loop over desired attribute values
-        #         for ab_val, ba_val in attributes_by_direction.values():
-        #             # get values for equivalent database column names
-        #             ab_attribute_values.append(row[list(row.keys()).index(ab_val)])
-        #             ba_attribute_values.append(row[list(row.keys()).index(ba_val)])
-        #
-        #         # get a node and b node
-        #         a = row[list(row.keys()).index(from_name)]
-        #         b = row[list(row.keys()).index(to_name)]
-        #
-        #         # put a and b into adjacency and node dictionaries if not there yet
-        #         if a not in self.adjacency:
-        #             self.adjacency[a] = {}
-        #             self.nodes[a] = []
-        #         if b not in self.adjacency:
-        #             self.adjacency[b] = {}
-        #             self.nodes[b] = []
-        #
-        #         # add edges and set attribute values
-        #         self.adjacency[a][b] = ab_attribute_values
-        #         self.adjacency[b][a] = ba_attribute_values
+        ab_df = link_df[[from_name, to_name]].copy()
+        ba_df = link_df[[from_name, to_name]].copy()
+
+        # set directional column values
+        for k, v in attributes_by_direction.items():
+            ab_df[k] = link_df[v[0]]
+            ba_df[k] = link_df[v[1]]
+
+        # TODO: add a two_way network property
+        ba_df.rename(columns={from_name: to_name, to_name: from_name}, inplace=True)
+
+        link_df = pd.concat([ab_df, ba_df]).set_index([from_name, to_name])
+
+        # nested dict of nodes, with first level being origin nodes, second destination
+        # e.g. {0: {0: [34, 'TWO LANE']},
+        #       2: {0: [23, 'FREEWAY']},
+        #       3: {1: [45, 'RAMP'],
+        #           2: [56, 'TWO LANE']}, ... }
+        self.adjacency = {node: {} for node in link_df.index.get_level_values(0)}
+
+        for nodes, vals in zip(link_df.index, link_df.values):
+            self.adjacency[nodes[0]][nodes[1]] = list(vals)
+
+        # put desired attribute names into network data structure
+        self.adjacency_names = list(link_df.columns)
 
 
     def read_nodes(self, file_name, node_name, attributes):
