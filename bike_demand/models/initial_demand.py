@@ -1,5 +1,6 @@
 import numpy as np
 
+from activitysim.core import inject
 from activitysim.core.config import (
     setting,
     data_file_path,
@@ -7,7 +8,7 @@ from activitysim.core.config import (
     read_model_settings)
 
 from ..utils import network
-from ..utils.input import read_taz, read_matrix
+from ..utils.input import read_matrix
 
 
 def initial_demand():
@@ -23,7 +24,7 @@ def initial_demand():
 
     add_derived_network_attributes(base_net)
 
-    taz_data = read_taz()
+    taz_data = inject.get_injectable('taz_data')
 
     nzones = len(taz_data)
 
@@ -68,13 +69,13 @@ def initial_demand():
         motutil_table = segment + trips_settings.get('motorized_util_table_suffix')
 
         # read in trip tables
-        base_trips = read_matrix(trip_table, taz_list=list(taz_data.keys()))
+        base_trips = read_matrix(trip_table)
 
         if base_trips.size == 0:
             print('\n%s is empty or missing' % trip_table)
             continue
 
-        base_motor_util = read_matrix(motutil_table, taz_list=list(taz_data.keys()))
+        base_motor_util = read_matrix(motutil_table)
 
         if base_motor_util.size == 0:
             print('\n%s is empty or missing' % motutil_table)

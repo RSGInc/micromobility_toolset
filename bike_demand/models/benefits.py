@@ -7,7 +7,7 @@ from activitysim.core.config import (
     read_model_settings)
 
 from ..utils import (network, output)
-from ..utils.input import read_taz, read_matrix
+from ..utils.input import read_matrix
 
 
 def benefits():

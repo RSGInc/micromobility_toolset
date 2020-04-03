@@ -1,13 +1,14 @@
 import argparse
 import numpy as np
 
+from activitysim.core import inject
 from activitysim.core.config import (
     setting,
     data_file_path,
     read_model_settings)
 
-from ..utils import (network, output)
-from ..utils.input import read_taz, read_matrix
+from ..utils import network
+from ..utils.input import read_matrix
 
 
 def incremental_demand():
@@ -16,7 +17,8 @@ def incremental_demand():
     trips_settings = read_model_settings('trips.yaml')
 
     # store number of zones
-    max_zone = setting('max_zone') + 1
+    taz_data = inject.get_injectable('taz_data')
+    nzones = len(taz_data)
 
     # read network data
     base_sqlite_file = data_file_path(setting('base_sqlite_file'))
@@ -31,13 +33,6 @@ def incremental_demand():
     add_derived_network_attributes(base_net, coef_walk, coef_bike)
     add_derived_network_attributes(build_net, coef_walk, coef_bike)
 
-    # read taz data and create taz node and county equivalency dictionaries
-    taz_data = read_taz_from_sqlite(base_sqlite_file,
-                                    setting('taz_table_name'),
-                                    index_col=setting('taz_table_name'),
-                                    columns=[setting('taz_node_column'),
-                                             setting('taz_county_column')])
-
     taz_nodes = {}
     taz_county = {}
     for taz in taz_data:
@@ -45,49 +40,36 @@ def incremental_demand():
         taz_county[taz] = taz_data[taz][setting('taz_county_column')]
 
 
-    # read base skims from disk or perform path searches
-    if setting('read_base_skims_from_disk'):
-        print('reading base skims from disk...')
-        base_bike_skim = read_matrix_from_sqlite(
-            base_sqlite_file, 'bike_skim',
-            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
-    else:
-        print('skimming base network...')
-        base_bike_skim = base_net.get_skim_matrix(taz_nodes,
-                                                  trips_settings.get('route_varcoef_bike'),
-                                                  trips_settings.get('max_cost_bike'))
-        base_bike_skim = base_bike_skim * \
-                            (np.ones((max_zone, max_zone)) - np.diag(np.ones(max_zone)))
+    print('skimming base network...')
+    base_bike_skim = base_net.get_skim_matrix(taz_nodes,
+                                              trips_settings.get('route_varcoef_bike'),
+                                              trips_settings.get('max_cost_bike'))
+    base_bike_skim = base_bike_skim * \
+                        (np.ones((nzones, nzones)) - np.diag(np.ones(nzones)))
 
-        print('writing results...')
-        output.write_matrix_to_sqlite(base_bike_skim,
-                                      base_sqlite_file,
-                                      'bike_skim',
-                                      ['value'])
+    print('writing results...')
+    # output.write_matrix_to_sqlite(base_bike_skim,
+    #                               base_sqlite_file,
+    #                               'bike_skim',
+    #                               ['value'])
 
-    # read build skims from disk or perform path searches
-    if setting('read_build_skims_from_disk'):
-        print('reading build skims from disk...')
-        build_bike_skim = read_matrix_from_sqlite(
-            build_sqlite_file, 'bike_skim',
-            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
-    else:
-        print('skimming build network...')
-        build_bike_skim = build_net.get_skim_matrix(taz_nodes,
-                                                    trips_settings.get('route_varcoef_bike'),
-                                                    trips_settings.get('max_cost_bike'))
-        build_bike_skim = build_bike_skim * \
-                            (np.ones((max_zone, max_zone)) - np.diag(np.ones(max_zone)))
 
-        # print('writing results...')
-        output.write_matrix_to_sqlite(build_bike_skim,
-                                      build_sqlite_file,
-                                      'bike_skim',
-                                      ['value'])
+    print('skimming build network...')
+    build_bike_skim = build_net.get_skim_matrix(taz_nodes,
+                                                trips_settings.get('route_varcoef_bike'),
+                                                trips_settings.get('max_cost_bike'))
+    build_bike_skim = build_bike_skim * \
+                        (np.ones((nzones, nzones)) - np.diag(np.ones(nzones)))
+
+    # print('writing results...')
+    # output.write_matrix_to_sqlite(build_bike_skim,
+    #                               build_sqlite_file,
+    #                               'bike_skim',
+    #                               ['value'])
 
     # fix build walk skims to zero, not needed for incremental model
-    base_walk_skim = np.zeros((max_zone, max_zone))
-    build_walk_skim = np.zeros((max_zone, max_zone))
+    base_walk_skim = np.zeros((nzones, nzones))
+    build_walk_skim = np.zeros((nzones, nzones))
 
     # don't report zero divide in np arrayes
     np.seterr(divide='ignore', invalid='ignore')
@@ -100,9 +82,7 @@ def incremental_demand():
         table = segment + trips_settings.get('trip_table_suffix')
 
         # read base trip table into matrix
-        base_trips = read_matrix_from_sqlite(
-            base_sqlite_file, table,
-            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
+        base_trips = read_matrix(table)
 
         if base_trips.size == 0:
             print('\n%s is empty or missing' % table)
@@ -121,11 +101,11 @@ def incremental_demand():
             build_bike_util = 0.5 * (build_bike_util + np.transpose(build_bike_util))
 
         # create 0-1 availability matrices when skim > 0
-        walk_avail = (base_walk_skim > 0) + np.diag(np.ones(max_zone))
+        walk_avail = (base_walk_skim > 0) + np.diag(np.ones(nzones))
         if table != 'nhbtrip':
-            bike_avail = (base_bike_skim > 0) * np.transpose(base_bike_skim > 0)  + np.diag(np.ones(max_zone))
+            bike_avail = (base_bike_skim > 0) * np.transpose(base_bike_skim > 0) + np.diag(np.ones(nzones))
         else:
-            bike_avail = (base_bike_skim > 0) + np.diag(np.ones(max_zone))
+            bike_avail = (base_bike_skim > 0) + np.diag(np.ones(nzones))
 
         # non-available gets extreme negative utility
         base_bike_util = bike_avail * base_bike_util - 999 * ( 1 - bike_avail )
@@ -163,10 +143,10 @@ def incremental_demand():
         build_trips[:,:,6] = build_bike_trips
 
         # write matrix to database
-        output.write_matrix_to_sqlite(build_trips,
-                                      build_sqlite_file,
-                                      table,
-                                      trips_settings.get('modes'))
+        # output.write_matrix_to_sqlite(build_trips,
+        #                               build_sqlite_file,
+        #                               table,
+        #                               trips_settings.get('modes'))
 
         # log build trips to console
         print('build trips')
