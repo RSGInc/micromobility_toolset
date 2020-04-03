@@ -60,6 +60,12 @@ def incremental_demand():
         build_walk_util = walk_avail * build_walk_util - 999 * ( 1 - walk_avail )
 
         # split full trip matrix and sum up into motorized, nonmotorized, walk, bike, and total
+
+        ####################################
+        # FIX: don't hard code these indices!
+        #
+        # use trip mode list
+        ####################################
         motorized_trips = np.sum(base_trips[:,:,:5],2)
         nonmotor_trips = np.sum(base_trips[:,:,5:],2)
         walk_trips = base_trips[:,:,5]
@@ -82,6 +88,11 @@ def incremental_demand():
         build_bike_trips = total_trips * np.nan_to_num( bike_trips * np.exp( build_bike_util - base_bike_util ) / denom )
 
         # combine into one trip matrix and proportionally scale motorized sub-modes
+        ####################################
+        # FIX: don't hard code these indices!
+        #
+        # use trip mode list
+        ####################################
         build_trips = base_trips.copy()
         for motorized_idx in range(5):
             build_trips[:,:,motorized_idx] = base_trips[:,:,motorized_idx] * np.nan_to_num(build_motor_trips / motorized_trips)

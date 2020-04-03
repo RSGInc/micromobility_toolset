@@ -27,14 +27,14 @@ class Network():
         self.centroid_connector_name = None
 
         self.read_links(
-            data_file_path(network_settings.get('link_table') + '.csv'),
+            network_settings.get('link_file'),
             network_settings.get('from_name'),
             network_settings.get('to_name'),
             network_settings.get('link_attributes_by_direction')
         )
 
         self.read_nodes(
-            data_file_path(network_settings.get('node_table') + '.csv'),
+            network_settings.get('node_file'),
             network_settings.get('node_name'),
             network_settings.get('node_attributes')
         )
@@ -78,6 +78,7 @@ class Network():
             ab_columns.append(ab)
             ba_columns.append(ba)
 
+        file_name = data_file_path(file_name)
         link_df = pd.read_csv(file_name, usecols=ab_columns + ba_columns + [from_name, to_name])
 
         ab_df = link_df[[from_name, to_name]].copy()
@@ -120,6 +121,7 @@ class Network():
 
         columns = list(attributes.values()) + [node_name]
 
+        file_name = data_file_path(file_name)
         node_df = pd.read_csv(file_name,
                               index_col=node_name,
                               usecols=columns)

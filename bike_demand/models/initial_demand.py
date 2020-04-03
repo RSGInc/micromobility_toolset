@@ -13,9 +13,6 @@ def initial_demand():
     nzones = inject.get_injectable('num_zones')
 
     walk_skim = inject.get_injectable('walk_skim')
-    walk_skim = walk_skim * (np.ones((nzones, nzones)) -
-                                       np.diag(np.ones(nzones)))
-
     bike_skim = inject.get_injectable('bike_skim')
 
     np.seterr(divide='ignore', invalid='ignore')
@@ -33,9 +30,6 @@ def initial_demand():
         base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
         base_walk_util = walk_skim * trips_settings.get('walk_skim_coef')
 
-        if segment != 'nhb':
-            base_bike_util = 0.5 * (base_bike_util + np.transpose(base_bike_util))
-
         base_motor_util = base_motor_util * (np.ones((nzones, nzones)) -
                                              np.diag(np.ones(nzones)))
 
@@ -50,6 +44,11 @@ def initial_demand():
         base_bike_util = base_bike_util - 999 * (1 - bike_avail)
         base_walk_util = base_walk_util - 999 * (1 - walk_avail)
 
+        ####################################
+        # FIX: don't hard code these indices!
+        #
+        # use trip mode list
+        ####################################
         motorized_trips = np.sum(base_trips[:, :, :5], 2)
         nonmotor_trips = np.sum(base_trips[:, :, 5:], 2)
         walk_trips = base_trips[:, :, 5]
@@ -70,6 +69,11 @@ def initial_demand():
         build_walk_trips = total_trips * np.nan_to_num(np.exp(base_walk_util) / denom)
         build_bike_trips = total_trips * np.nan_to_num(np.exp(base_bike_util) / denom)
 
+        ####################################
+        # FIX: don't hard code these indices!
+        #
+        # use trip mode list
+        ####################################
         build_trips = base_trips.copy()
         for motorized_idx in range(5):
             build_trips[:, :, motorized_idx] = \

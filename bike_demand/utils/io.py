@@ -69,6 +69,13 @@ def base_network():
 
 
 @inject.injectable(cache=True)
+def auto_skim():
+    n_settings = inject.get_injectable('network_settings')
+    auto_skim_file = n_settings.get('auto_skim_file')
+
+    return read_matrix(auto_skim_file)
+
+@inject.injectable(cache=True)
 def bike_skim():
 
     t_settings = inject.get_injectable('trips_settings')

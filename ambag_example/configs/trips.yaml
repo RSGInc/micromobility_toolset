@@ -20,6 +20,16 @@ segments:
 trip_ataz_col: ataz
 trip_ptaz_col: ptaz
 
+# modes in order of columns in sqlite database tables
+modes:
+    - da
+    - s2
+    - s3
+    - wt
+    - dt
+    - wk
+    - bk
+
 trip_table_suffix: trip
 motorized_util_table_suffix: motutil
 
@@ -66,16 +76,6 @@ route_varcoef_walk:
     distance: 1.0
     bike_exclude: 999.0
     thru_centroid: 999.0
-
-# modes in order of columns in sqlite database tables
-modes:
-    - da
-    - s2
-    - s3
-    - wt
-    - dt
-    - wk
-    - bk
 
 # maximum cost after which skimming is halted
 max_cost_bike: 15.0

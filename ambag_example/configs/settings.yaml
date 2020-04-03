@@ -11,13 +11,12 @@ build_sqlite_file: example.db
 taz_table_name: taz
 taz_taz_column: taz
 taz_node_column: node_id
-taz_county_column: co
 
 # should tracing be performed in incremental logit, and for which zones and segment
-trace: False
-trace_ptaz: 1455
-trace_ataz: 1493
-trace_segment: nwk1
+# trace: False
+# trace_ptaz: 1455
+# trace_ataz: 1493
+# trace_segment: nwk1
 
 # parameters for emissions estimation
 pollutants:

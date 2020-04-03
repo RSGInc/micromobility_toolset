@@ -26,11 +26,6 @@ def assign_demand():
 
     add_derived_network_attributes(base_net)
 
-    taz_nodes = {}
-    taz_county = {}
-    for taz in taz_data:
-        taz_nodes[taz] = taz_data[taz][setting('taz_node_column')]
-        taz_county[taz] = taz_data[taz][setting('taz_county_column')]
 
     total_demand = np.zeros((nzones, nzones))
 
@@ -41,6 +36,11 @@ def assign_demand():
 
         base_trips = read_matrix(table)
 
+        ####################################
+        # FIX: don't hard code these indices!
+        #
+        # use trip mode list
+        ####################################
         bike_trips = base_trips[:, :, 6]
 
         if table != 'nhbtrip':

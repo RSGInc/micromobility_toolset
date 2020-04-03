@@ -1,5 +1,6 @@
+auto_skim_file: auto_skim
 
-link_table: link
+link_file: link.csv
 from_name: from_node
 to_name: to_node
 
@@ -29,7 +30,7 @@ link_attributes_by_direction:
         - wait
         - wait
 
-node_table: node
+node_file: node.csv
 node_name: node_id
 
 node_attributes:

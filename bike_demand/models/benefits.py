@@ -11,10 +11,10 @@ def benefits():
     trips_settings = inject.get_injectable('trips_settings')
 
     # get number of zones to dimension matrices
-    nzones = len(inject.get_injectable('taz_data'))
+    nzones = inject.get_injectable('num_zones')
 
     # read auto times and distances
-    auto_skim = read_matrix('auto_skim')
+    auto_skim = inject.get_injectable('auto_skim')
 
     # initialize empty matrices
     delta_trips = np.zeros((nzones, nzones, len(trips_settings.get('modes'))))
@@ -39,6 +39,11 @@ def benefits():
         delta_trips = delta_trips + build_trips - base_trips
 
         # calculate logsums
+        ####################################
+        # FIX: don't hard code these indices!
+        #
+        # use trip mode list
+        ####################################
         base_logsum = np.log(1.0 + np.nan_to_num(base_trips[:, :, 6] /
                             (np.sum(base_trips, 2) - base_trips[:, :, 6])))
         build_logsum = np.log(1.0 + np.nan_to_num(build_trips[:, :, 6] /
