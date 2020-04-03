@@ -91,7 +91,13 @@ class Skim():
         else:
             dim = (matrix_length, matrix_length)
 
-        np_matrix = np.zeros(dim)
+        ## Should we allow non-floats? They are much bulkier
+        # if any(data.dtypes.isin([np.dtype('object')])):
+        #     dtype = np.dtype('object')
+        # else:
+        #     dtype = np.dtype('float')
+
+        np_matrix = np.zeros(dim) #.astype(dtype)
 
         o_index = [mapping.index(i) for i in o_vals]
         d_index = [mapping.index(i) for i in d_vals]
@@ -216,9 +222,16 @@ class Skim():
                  col_names=None,
                  mapping=None):
 
+        if col_names:
+            # usecols doesn't include index_col values by default
+            columns = list(col_names) + list([orig_col, dest_col])
+        else:
+            # None will include all columns
+            columns = None
+
         matrix_df = pd.read_csv(csv_file,
                                 index_col=[orig_col, dest_col],
-                                usecols=col_names)
+                                usecols=None)
 
         return cls(matrix_df,
                    orig_col=orig_col,
@@ -249,7 +262,7 @@ if __name__ == '__main__':
     df = skim.to_dataframe()
     print(df.head())
     print(df.shape)
-    print(skim.to_numpy().shape)
+    print(df.index)
 
     # new_skim = Skim(df, mapping=[3, 5, 6, 1])
     # print(new_skim.to_dataframe())

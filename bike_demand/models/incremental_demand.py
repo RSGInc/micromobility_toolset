@@ -2,13 +2,10 @@ import argparse
 import numpy as np
 
 from activitysim.core import inject
-from activitysim.core.config import (
-    setting,
-    data_file_path,
-    read_model_settings)
+from activitysim.core.config import setting
 
 from ..utils import network
-from ..utils.input import read_matrix
+from ..utils.io import read_matrix
 
 
 def incremental_demand():

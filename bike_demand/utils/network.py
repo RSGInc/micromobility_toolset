@@ -1,15 +1,18 @@
 import random
 from math import atan2, pi
-import sqlite3
 import heapq
 
 import numpy as np
 import pandas as pd
 
+from activitysim.core.config import data_file_path
+
+from .skim import Skim
+
 
 class Network():
 
-    def __init__(self, network_settings, sqlite_file):
+    def __init__(self, network_settings):
         """initialize network data structure, void"""
 
         self.adjacency = {}
@@ -25,17 +28,15 @@ class Network():
 
         self.centroid_connector_name = None
 
-        self.read_links_from_sqlite(
-            sqlite_file,
-            network_settings.get('link_table'),
+        self.read_links(
+            data_file_path(network_settings.get('link_table') + '.csv'),
             network_settings.get('from_name'),
             network_settings.get('to_name'),
             network_settings.get('link_attributes_by_direction')
         )
 
-        self.read_nodes_from_sqlite(
-            sqlite_file,
-            network_settings.get('node_table'),
+        self.read_nodes(
+            data_file_path(network_settings.get('node_table') + '.csv'),
             network_settings.get('node_name'),
             network_settings.get('node_attributes')
         )
@@ -57,15 +58,14 @@ class Network():
 
         self.create_dual()
 
-    def read_links_from_sqlite(self, file_name,
-                               table_name,
-                               from_name,
-                               to_name,
-                               attributes_by_direction):
+    def read_links(self, file_name,
+                   from_name,
+                   to_name,
+                   attributes_by_direction):
+
         """read links from sqlite database into network data structure, void
 
-        file_name : path to sqlite database
-        table_name : name of link table in database
+        file_name : path to csv
         from_name : column name of from node
         to_name : column name of to node
         attributes_by_direction : dictionary of
@@ -77,59 +77,57 @@ class Network():
         # put desired attribute names into network data structure
         self.adjacency_names = list(attributes_by_direction.keys())
 
-        # open database cursor
-        database_connection = sqlite3.connect(file_name)
-        database_connection.row_factory = sqlite3.Row
-        database_cursor = database_connection.cursor()
+        columns = []
+        for ab, ba in attributes_by_direction.values():
+            columns.append(ab)
+            columns.append(ba)
 
-        # execute select of link table
-        database_cursor.execute('select * from ' + table_name)
+        link_df = pd.read_csv(file_name,
+                              index_col=[from_name, to_name],
+                              usecols=columns + [from_name, to_name])
+        print(link_df.head())
 
-        # loop over database records
-        while True:
+        # # loop over database records
+        # while True:
+        #
+        #     # get next record
+        #     row = database_cursor.fetchone()
+        #
+        #     if row is None:
+        #         # if no more records we're done
+        #         break
+        #     else:
+        #         # set up attribute value lists by direction
+        #         ab_attribute_values = []
+        #         ba_attribute_values = []
+        #
+        #         # loop over desired attribute values
+        #         for ab_val, ba_val in attributes_by_direction.values():
+        #             # get values for equivalent database column names
+        #             ab_attribute_values.append(row[list(row.keys()).index(ab_val)])
+        #             ba_attribute_values.append(row[list(row.keys()).index(ba_val)])
+        #
+        #         # get a node and b node
+        #         a = row[list(row.keys()).index(from_name)]
+        #         b = row[list(row.keys()).index(to_name)]
+        #
+        #         # put a and b into adjacency and node dictionaries if not there yet
+        #         if a not in self.adjacency:
+        #             self.adjacency[a] = {}
+        #             self.nodes[a] = []
+        #         if b not in self.adjacency:
+        #             self.adjacency[b] = {}
+        #             self.nodes[b] = []
+        #
+        #         # add edges and set attribute values
+        #         self.adjacency[a][b] = ab_attribute_values
+        #         self.adjacency[b][a] = ba_attribute_values
 
-            # get next record
-            row = database_cursor.fetchone()
 
-            if row is None:
-                # if no more records we're done
-                break
-            else:
-                # set up attribute value lists by direction
-                ab_attribute_values = []
-                ba_attribute_values = []
-
-                # loop over desired attribute values
-                for ab_val, ba_val in attributes_by_direction.values():
-                    # get values for equivalent database column names
-                    ab_attribute_values.append(row[list(row.keys()).index(ab_val)])
-                    ba_attribute_values.append(row[list(row.keys()).index(ba_val)])
-
-                # get a node and b node
-                a = row[list(row.keys()).index(from_name)]
-                b = row[list(row.keys()).index(to_name)]
-
-                # put a and b into adjacency and node dictionaries if not there yet
-                if a not in self.adjacency:
-                    self.adjacency[a] = {}
-                    self.nodes[a] = []
-                if b not in self.adjacency:
-                    self.adjacency[b] = {}
-                    self.nodes[b] = []
-
-                # add edges and set attribute values
-                self.adjacency[a][b] = ab_attribute_values
-                self.adjacency[b][a] = ba_attribute_values
-
-        # close database connection
-        database_cursor.close()
-        database_connection.close()
-
-    def read_nodes_from_sqlite(self, file_name, table_name, node_name, attributes):
+    def read_nodes(self, file_name, node_name, attributes):
         """read links from sqlite database into network data structure, void
 
-        file_name : path to sqlite database
-        table_name : name of link table in database
+        file_name : name of link file
         node_name : column name of node id
         attributes : dictionary of { name in network data structure : name in database }
         """
@@ -137,18 +135,13 @@ class Network():
         # put desired attribute names into network data structure
         self.node_names = list(attributes.keys())
 
-        # open database cursor
-        database_connection = sqlite3.connect(file_name)
+        columns = list(attributes.values()) + [node_name]
 
-        node_df = pd.read_sql('select * from ' + table_name,
-                              database_connection,
+        node_df = pd.read_csv(file_name,
                               index_col=node_name,
-                              columns=list(attributes.values()))
+                              usecols=columns)
 
         self.nodes = dict(zip(node_df.index, node_df.to_numpy().tolist()))
-
-        # close database connection
-        database_connection.close()
 
     def check_network_completeness(self):
         """check to see that all nodes have edges and nodes for all edges have defined attributes

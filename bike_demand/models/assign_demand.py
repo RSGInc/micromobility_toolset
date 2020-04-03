@@ -10,7 +10,7 @@ from activitysim.core.config import (
     read_model_settings)
 
 from ..utils import (network, output)
-from ..utils.input import read_matrix
+from ..utils.io import read_matrix
 
 
 def assign_demand():

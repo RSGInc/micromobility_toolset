@@ -1,32 +1,24 @@
 import numpy as np
 
 from activitysim.core import inject
-from activitysim.core.config import (
-    setting,
-    data_file_path,
-    read_model_settings)
+from activitysim.core.config import setting
 
-from ..utils import (network, output)
-from ..utils.input import read_matrix
+from ..utils.io import read_matrix
 
 
 def benefits():
     # initialize configuration data
-    trips_settings = read_model_settings('trips.yaml')
+    trips_settings = inject.get_injectable('trips_settings')
 
     # get number of zones to dimension matrices
-    max_zone = setting('max_zone') + 1
-
-    base_sqlite_file = data_file_path(setting('base_sqlite_file'))
-    build_sqlite_file = data_file_path(setting('build_sqlite_file'))
+    nzones = len(inject.get_injectable('taz_data'))
 
     # read auto times and distances
-    auto_skim = read_matrix_from_sqlite(
-        base_sqlite_file, 'auto_skim', 'i', 'j')
+    auto_skim = read_matrix('auto_skim')
 
     # initialize empty matrices
-    delta_trips = np.zeros((max_zone, max_zone, len(trips_settings.get('modes'))))
-    user_ben = np.zeros((max_zone, max_zone))
+    delta_trips = np.zeros((nzones, nzones, len(trips_settings.get('modes'))))
+    user_ben = np.zeros((nzones, nzones))
 
     # ignore np divide by zero errors
     np.seterr(divide='ignore', invalid='ignore')
@@ -40,13 +32,8 @@ def benefits():
         table = segment + trips_settings.get('trip_table_suffix')
 
         # read in trip tables
-        base_trips = read_matrix_from_sqlite(
-            base_sqlite_file, table,
-            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
-
-        build_trips = read_matrix_from_sqlite(
-            build_sqlite_file, table,
-            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
+        base_trips = read_matrix(table)
+        build_trips = read_matrix(table)
 
         if base_trips.size == 0 or build_trips.size == 0:
             print('%s is empty or missing' % table)
@@ -63,7 +50,7 @@ def benefits():
 
         # calculate user benefits
         user_ben = user_ben - np.sum(base_trips, 2) * \
-            (build_logsum - base_logsum) / trips_settings.get('ivt_coef')[table]
+            (build_logsum - base_logsum) / trips_settings.get('ivt_coef')[segment]
 
     # calculate difference in vmt and vehicle minutes of travel
     delta_minutes = auto_skim[:, :, 0] * (delta_trips[:, :, 0] +
@@ -77,7 +64,7 @@ def benefits():
     print('Change in VMT: ', int(np.sum(delta_miles)))
 
     # calculate difference in pollutants
-    delta_pollutants = np.zeros((max_zone, max_zone, len(setting('pollutants').keys())))
+    delta_pollutants = np.zeros((nzones, nzones, len(setting('pollutants').keys())))
     for idx, pollutant in enumerate(setting('pollutants').items()):
         delta_pollutants[:, :, idx] = delta_miles * pollutant[1]['grams_per_mile'] + \
             delta_minutes * pollutant[1]['grams_per_minute']

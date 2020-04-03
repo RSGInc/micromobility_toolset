@@ -1,26 +1,20 @@
 import numpy as np
 
 from activitysim.core import inject
-from activitysim.core.config import (
-    setting,
-    data_file_path,
-    output_file_path,
-    read_model_settings)
+from activitysim.core.config import setting
 
 from ..utils import network
-from ..utils.input import read_matrix
+from ..utils.io import read_matrix
 
 
 def initial_demand():
     # initialize configuration data
-    network_settings = read_model_settings('network.yaml')
-    trips_settings = read_model_settings('trips.yaml')
+    network_settings = inject.get_injectable('network_settings')
+    trips_settings = inject.get_injectable('trips_settings')
 
     # read network data
-    base_sqlite_file = data_file_path(setting('base_sqlite_file'))
-    build_sqlite_file = data_file_path(setting('build_sqlite_file'))
-    base_net = network.Network(network_settings, base_sqlite_file)
-    build_net = network.Network(network_settings, build_sqlite_file)
+    base_net = network.Network(network_settings)
+    build_net = network.Network(network_settings)
 
     add_derived_network_attributes(base_net)
 
