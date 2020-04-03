@@ -616,7 +616,8 @@ class Network():
                     skim_matrix[list(taz_nodes.keys()).index(i),
                                 list(taz_nodes.keys()).index(j)] = costs[taz_nodes[j]]
 
-        return skim_matrix
+        # Don't include intrazonal values
+        return skim_matrix * (np.ones((nzones, nzones)) - np.diag(np.ones(nzones)))
 
     def load_trip_matrix(self, trips, load_name, taz_nodes, varcoef, max_cost=None):
 

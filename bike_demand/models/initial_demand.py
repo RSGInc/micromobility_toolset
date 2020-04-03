@@ -10,18 +10,13 @@ def initial_demand():
     # initialize configuration data
     trips_settings = inject.get_injectable('trips_settings')
 
-    # read network data
-    base_net = inject.get_injectable('base_network')
-
     nzones = inject.get_injectable('num_zones')
 
-    base_walk_skim = inject.get_injectable('base_walk_skim')
-    base_walk_skim = base_walk_skim * (np.ones((nzones, nzones)) -
+    walk_skim = inject.get_injectable('walk_skim')
+    walk_skim = walk_skim * (np.ones((nzones, nzones)) -
                                        np.diag(np.ones(nzones)))
 
-    base_bike_skim = inject.get_injectable('base_bike_skim')
-    base_bike_skim = base_bike_skim * (np.ones((nzones, nzones)) -
-                                       np.diag(np.ones(nzones)))
+    bike_skim = inject.get_injectable('bike_skim')
 
     np.seterr(divide='ignore', invalid='ignore')
 
@@ -35,8 +30,8 @@ def initial_demand():
         base_trips = read_matrix(trip_table)
         base_motor_util = read_matrix(motutil_table)
 
-        base_bike_util = base_bike_skim * trips_settings.get('bike_skim_coef')
-        base_walk_util = base_walk_skim * trips_settings.get('walk_skim_coef')
+        base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
+        base_walk_util = walk_skim * trips_settings.get('walk_skim_coef')
 
         if segment != 'nhb':
             base_bike_util = 0.5 * (base_bike_util + np.transpose(base_bike_util))
@@ -49,8 +44,8 @@ def initial_demand():
         base_bike_util = base_bike_util + trips_settings.get('bike_intrazonal')
         base_walk_util = base_walk_util + trips_settings.get('walk_intrazonal')
 
-        bike_avail = (base_bike_skim > 0) + np.diag(np.ones(nzones))
-        walk_avail = (base_walk_skim > 0) + np.diag(np.ones(nzones))
+        bike_avail = (bike_skim > 0) + np.diag(np.ones(nzones))
+        walk_avail = (walk_skim > 0) + np.diag(np.ones(nzones))
 
         base_bike_util = base_bike_util - 999 * (1 - bike_avail)
         base_walk_util = base_walk_util - 999 * (1 - walk_avail)

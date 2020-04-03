@@ -69,29 +69,33 @@ def base_network():
 
 
 @inject.injectable(cache=True)
-def base_bike_skim():
+def bike_skim():
 
     t_settings = inject.get_injectable('trips_settings')
     net = inject.get_injectable('base_network')
     tazs = inject.get_injectable('taz_nodes')
 
     print('skimming bike_skim from network...')
-    return net.get_skim_matrix(tazs,
-                               t_settings.get('route_varcoef_bike'),
-                               max_cost=t_settings.get('max_cost_bike'))
+    matrix = net.get_skim_matrix(tazs,
+        t_settings.get('route_varcoef_bike'),
+        max_cost=t_settings.get('max_cost_bike'))
+
+    return matrix
 
 
 @inject.injectable(cache=True)
-def base_walk_skim():
+def walk_skim():
 
     t_settings = inject.get_injectable('trips_settings')
     net = inject.get_injectable('base_network')
     tazs = inject.get_injectable('taz_nodes')
 
     print('skimming walk_skim from network...')
-    return net.get_skim_matrix(tazs,
-                               t_settings.get('route_varcoef_walk'),
-                               max_cost=t_settings.get('max_cost_walk'))
+    matrix = net.get_skim_matrix(tazs,
+        t_settings.get('route_varcoef_walk'),
+        max_cost=t_settings.get('max_cost_walk'))
+
+    return matrix
 
 
 def read_matrix(table_name):
