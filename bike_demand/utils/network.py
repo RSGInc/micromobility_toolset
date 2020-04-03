@@ -633,3 +633,93 @@ class Network():
                     for k in range(len(paths[target])-1):
                         edge = (paths[target][k],paths[target][k+1])
                         self.set_edge_attribute_value(edge,load_name,trips[i,j]+self.get_edge_attribute_value(edge,load_name))
+
+    def add_derived_network_attributes(self, coef_walk=None, coef_bike=None):
+        """add selfwork attributes that are combinations of existing attributes"""
+
+        # add new link attribute columns
+        self.add_edge_attribute('d0') # distance on ordinary streets, miles
+        self.add_edge_attribute('d1') # distance on bike paths
+        self.add_edge_attribute('d2') # distance on bike lanes
+        self.add_edge_attribute('d3') # distance on bike routes
+        self.add_edge_attribute('dne1') # distance not on bike paths
+        self.add_edge_attribute('dne2') # distance not on bike lanes
+        self.add_edge_attribute('dne3') # distance not on bike routes
+        self.add_edge_attribute('dw') # distance wrong way
+        #gain now comes directly from sqlite
+        #self.add_edge_attribute('riseft')
+        self.add_edge_attribute('auto_permit') # autos permitted
+        self.add_edge_attribute('bike_exclude') # bikes excluded
+        self.add_edge_attribute('dloc') # distance on local streets
+        self.add_edge_attribute('dcol') # distance on collectors
+        self.add_edge_attribute('dart') # distance on arterials
+        self.add_edge_attribute('dne3loc') # distance on locals with no bike route
+        self.add_edge_attribute('dne2art') # distance on arterials with no bike lane
+
+        # loop over edges and calculate derived values
+        for a in self.adjacency:
+            for b in self.adjacency[a]:
+                distance = self.get_edge_attribute_value((a,b),'distance')
+                bike_class = self.get_edge_attribute_value((a,b),'bike_class')
+                lanes = self.get_edge_attribute_value((a,b),'lanes')
+                #gain now comes directly from sqlite
+                #from_elev = self.get_edge_attribute_value((a,b),'from_elev')
+                #to_elev = self.get_edge_attribute_value((a,b),'to_elev')
+                link_type = self.get_edge_attribute_value((a,b),'link_type')
+                fhwa_fc = self.get_edge_attribute_value((a,b),'fhwa_fc')
+                self.set_edge_attribute_value( (a,b), 'd0', distance * ( bike_class == 0 and lanes > 0 ) )
+                self.set_edge_attribute_value( (a,b), 'd1', distance * ( bike_class == 1 ) )
+                self.set_edge_attribute_value( (a,b), 'd2', distance * ( bike_class == 2 ) )
+                self.set_edge_attribute_value( (a,b), 'd3', distance * ( bike_class == 3 ) )
+                self.set_edge_attribute_value( (a,b), 'dne1', distance * ( bike_class != 1 ) )
+                self.set_edge_attribute_value( (a,b), 'dne2', distance * ( bike_class != 2 ) )
+                self.set_edge_attribute_value( (a,b), 'dne3', distance * ( bike_class != 3 ) )
+                self.set_edge_attribute_value( (a,b), 'dw', distance * ( bike_class == 0 and lanes == 0 ) )
+                #gain now comes directly from sqlite
+                #self.set_edge_attribute_value( (a,b), 'riseft',  max(to_elev - from_elev,0) )
+                self.set_edge_attribute_value( (a,b), 'bike_exclude', 1 * ( link_type in ['FREEWAY'] ) )
+                self.set_edge_attribute_value( (a,b), 'auto_permit', 1 * ( link_type not in ['BIKE','PATH'] ) )
+                self.set_edge_attribute_value( (a,b), 'dloc', distance * ( fhwa_fc in [19,9] ) )
+                self.set_edge_attribute_value( (a,b), 'dcol', distance * ( fhwa_fc in [7,8,16,17] ) )
+                self.set_edge_attribute_value( (a,b), 'dart', distance * ( fhwa_fc in [1,2,6,11,12,14,77] ) )
+                self.set_edge_attribute_value( (a,b), 'dne3loc', distance * ( fhwa_fc in [19,9] ) * ( bike_class != 3 ) )
+                self.set_edge_attribute_value( (a,b), 'dne2art', distance * ( fhwa_fc in [1,2,6,11,12,14,77] ) * ( bike_class != 2 ) )
+
+        # add new dual (link-to-link) attribute columns
+        self.add_dual_attribute('thru_centroid') # from centroid connector to centroid connector
+        self.add_dual_attribute('l_turn') # left turn
+        self.add_dual_attribute('u_turn') # u turn
+        self.add_dual_attribute('r_turn') # right turn
+        self.add_dual_attribute('turn') # turn
+        self.add_dual_attribute('thru_intersec') # through a highway intersection
+        self.add_dual_attribute('thru_junction') # through a junction
+
+        self.add_dual_attribute('path_onoff') # movement in between bike path and other type
+
+        self.add_dual_attribute('walk_cost') # total walk generalized cost
+        self.add_dual_attribute('bike_cost') # total bike generalized cost
+
+        # loop over pairs of edges and set attribute values
+        for edge1 in self.dual:
+            for edge2 in self.dual[edge1]:
+
+                traversal_type = self.traversal_type(edge1,edge2,'auto_permit')
+
+                self.set_dual_attribute_value(edge1,edge2,'thru_centroid', 1 * (traversal_type == 0) )
+                self.set_dual_attribute_value(edge1,edge2,'u_turn', 1 * (traversal_type == 3 ) )
+                self.set_dual_attribute_value(edge1,edge2,'l_turn', 1 * (traversal_type in [5,7,10,13]) )
+                self.set_dual_attribute_value(edge1,edge2,'r_turn', 1 * (traversal_type in [4,6,9,11]) )
+                self.set_dual_attribute_value(edge1,edge2,'turn', 1 * (traversal_type in [3,4,5,6,7,9,10,11,13]) )
+                self.set_dual_attribute_value(edge1,edge2,'thru_intersec', 1 * (traversal_type in [8,12]) )
+                self.set_dual_attribute_value(edge1,edge2,'thru_junction', 1 * (traversal_type == 14) )
+
+                path1 = ( self.get_edge_attribute_value(edge1,'bike_class') == 1 )
+                path2 = ( self.get_edge_attribute_value(edge2,'bike_class') == 1 )
+
+                self.set_dual_attribute_value(edge1,edge2,'path_onoff', 1 * ( (path1 + path2) == 1 ) )
+
+                if coef_walk:
+                    self.set_dual_attribute_value(edge1,edge2,'walk_cost',self.calculate_variable_cost(edge1,edge2,coef_walk,0.0) )
+
+                if coef_bike:
+                    self.set_dual_attribute_value(edge1,edge2,'bike_cost',self.calculate_variable_cost(edge1,edge2,coef_bike,0.0) )

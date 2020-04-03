@@ -13,9 +13,6 @@ taz_taz_column: taz
 taz_node_column: node_id
 taz_county_column: co
 
-# number of zones
-num_zones: 25
-
 # should tracing be performed in incremental logit, and for which zones and segment
 trace: False
 trace_ptaz: 1455

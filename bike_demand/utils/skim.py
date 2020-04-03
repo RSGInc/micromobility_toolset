@@ -91,13 +91,13 @@ class Skim():
         else:
             dim = (matrix_length, matrix_length)
 
-        ## Should we allow non-floats? They are much bulkier
+        # # Should we allow non-floats? They are much bulkier
         # if any(data.dtypes.isin([np.dtype('object')])):
         #     dtype = np.dtype('object')
         # else:
         #     dtype = np.dtype('float')
 
-        np_matrix = np.zeros(dim) #.astype(dtype)
+        np_matrix = np.zeros(dim)  # .astype(dtype)
 
         o_index = [mapping.index(i) for i in o_vals]
         d_index = [mapping.index(i) for i in d_vals]
