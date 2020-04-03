@@ -73,7 +73,7 @@ def auto_skim():
     n_settings = inject.get_injectable('network_settings')
     auto_skim_file = n_settings.get('auto_skim_file')
 
-    return read_matrix(auto_skim_file)
+    return load_matrix(auto_skim_file)
 
 @inject.injectable(cache=True)
 def bike_skim():
@@ -105,12 +105,28 @@ def walk_skim():
     return matrix
 
 
-def read_matrix(table_name):
+def load_util_table(segment):
+
+    t_settings = inject.get_injectable('trips_settings')
+    table_file = t_settings.get('motorized_util_files').get(segment)
+
+    return load_matrix(table_file)
+
+
+def load_trip_matrix(segment):
+
+    t_settings = inject.get_injectable('trips_settings')
+    table_file = t_settings.get('trip_files').get(segment)
+
+    return load_matrix(table_file)
+
+
+def load_matrix(file_name):
 
     t_settings = inject.get_injectable('trips_settings')
     taz_l = inject.get_injectable('taz_list')
 
-    skim = Skim.from_csv(data_file_path(table_name + '.csv'),
+    skim = Skim.from_csv(data_file_path(file_name),
                          t_settings.get('trip_ataz_col'),
                          t_settings.get('trip_ptaz_col'),
                          mapping=taz_l)

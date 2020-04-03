@@ -6,35 +6,22 @@ from activitysim.core import inject
 from activitysim.core.config import setting, output_file_path
 
 from ..utils import network
-from ..utils.io import read_matrix
+from ..utils.io import load_trip_matrix
 
 
 def assign_demand():
 
     # initialize configuration data
-    network_settings = inject.get_injectable('network_settings')
     trips_settings = inject.get_injectable('trips_settings')
 
-    taz_data = inject.get_injectable('taz_data')
-
-    # store number of zones
-    nzones = len(taz_data)
-
-    # read network data
-    base_net = network.Network(network_settings)
-    build_net = network.Network(network_settings)
-
-    add_derived_network_attributes(base_net)
-
+    nzones = inject.get_injectable('num_zones')
 
     total_demand = np.zeros((nzones, nzones))
 
     print('getting demand matrices...')
     for segment in trips_settings.get('segments'):
 
-        table = segment + trips_settings.get('trip_table_suffix')
-
-        base_trips = read_matrix(table)
+        base_trips = load_trip_matrix(segment)
 
         ####################################
         # FIX: don't hard code these indices!
@@ -43,11 +30,11 @@ def assign_demand():
         ####################################
         bike_trips = base_trips[:, :, 6]
 
-        if table != 'nhbtrip':
+        if segment != 'nhb':
             bike_trips = 0.5 * (bike_trips + np.transpose(bike_trips))
 
         print('')
-        print(('segment ' + table))
+        print(('segment ' + segment))
         print('non-intrazonal bike trips')
         print(int(np.sum(bike_trips * (np.ones((nzones, nzones)) -
                                        np.diag(np.ones(nzones))))))
@@ -56,9 +43,8 @@ def assign_demand():
 
     print('')
     print('assigning trips...')
-    base_net.load_trip_matrix(total_demand, 'bike_vol', taz_nodes,
-                              trips_settings.get('route_varcoef_bike'),
-                              trips_settings.get('max_cost_bike'))
+
+    base_net = inject.get_injectable('base_network')
 
     with open(output_file_path('bike_vol.csv'), 'w') as f:
         writer = csv.writer(f)

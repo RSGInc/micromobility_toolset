@@ -3,7 +3,7 @@ import numpy as np
 from activitysim.core import inject
 from activitysim.core.config import setting
 
-from ..utils.io import read_matrix
+from ..utils.io import load_util_table, load_trip_matrix
 
 
 def initial_demand():
@@ -20,12 +20,9 @@ def initial_demand():
     print('performing model calculations...')
     for segment in trips_settings.get('segments'):
 
-        trip_table = segment + trips_settings.get('trip_table_suffix')
-        motutil_table = segment + trips_settings.get('motorized_util_table_suffix')
-
         # read in trip tables
-        base_trips = read_matrix(trip_table)
-        base_motor_util = read_matrix(motutil_table)
+        base_trips = load_trip_matrix(segment)
+        base_motor_util = load_util_table(segment)
 
         base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
         base_walk_util = walk_skim * trips_settings.get('walk_skim_coef')

@@ -3,7 +3,7 @@ import numpy as np
 from activitysim.core import inject
 from activitysim.core.config import setting
 
-from ..utils.io import read_matrix
+from ..utils.io import load_trip_matrix
 
 
 def benefits():
@@ -29,11 +29,9 @@ def benefits():
     # loop over market segments
     for segment in trips_settings.get('segments'):
 
-        table = segment + trips_settings.get('trip_table_suffix')
-
         # read in trip tables
-        base_trips = read_matrix(table)
-        build_trips = read_matrix(table)
+        base_trips = load_trip_matrix(segment)
+        build_trips = load_trip_matrix(segment)
 
         # calculate difference in trips
         delta_trips = delta_trips + build_trips - base_trips

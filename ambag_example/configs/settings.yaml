@@ -1,11 +1,12 @@
 models:
+  - initial_demand
   - incremental_demand
   - benefits
   - assign_demand
 
-# locations of base and build sqlite databases
-base_sqlite_file: example.db
-build_sqlite_file: example.db
+# # locations of base and build sqlite databases
+# base_sqlite_file: example.db
+# build_sqlite_file: example.db
 
 # taz table name and column names
 taz_table_name: taz

@@ -1,4 +1,4 @@
-auto_skim_file: auto_skim
+auto_skim_file: auto_skim.csv
 
 link_file: link.csv
 from_name: from_node

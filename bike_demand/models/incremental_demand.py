@@ -5,7 +5,7 @@ from activitysim.core import inject
 from activitysim.core.config import setting
 
 from ..utils import network
-from ..utils.io import read_matrix
+from ..utils.io import load_trip_matrix
 
 
 def incremental_demand():
@@ -28,10 +28,8 @@ def incremental_demand():
     # loop over market segments
     for segment in trips_settings.get('segments'):
 
-        table = segment + trips_settings.get('trip_table_suffix')
-
         # read base trip table into matrix
-        base_trips = read_matrix(table)
+        base_trips = load_trip_matrix(segment)
 
         # calculate base walk and bike utilities
         base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
@@ -42,13 +40,13 @@ def incremental_demand():
         build_walk_util = base_walk_util.copy()
 
         # if not nhb, average PA and AP bike utilities
-        if table != 'nhbtrip':
+        if segment != 'nhb':
             base_bike_util = 0.5 * (base_bike_util + np.transpose(base_bike_util))
             build_bike_util = 0.5 * (build_bike_util + np.transpose(build_bike_util))
 
         # create 0-1 availability matrices when skim > 0
         walk_avail = (walk_skim > 0) + np.diag(np.ones(nzones))
-        if table != 'nhbtrip':
+        if segment != 'nhb':
             bike_avail = (bike_skim > 0) * np.transpose(bike_skim > 0) + np.diag(np.ones(nzones))
         else:
             bike_avail = (bike_skim > 0) + np.diag(np.ones(nzones))
