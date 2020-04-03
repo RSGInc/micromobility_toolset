@@ -10,19 +10,16 @@ from ..utils.io import read_matrix
 
 def incremental_demand():
     # initialize configuration data
-    network_settings = read_model_settings('network.yaml')
-    trips_settings = read_model_settings('trips.yaml')
+    network_settings = inject.get_injectable('network_settings')
+    trips_settings = inject.get_injectable('trips_settings')
 
     # store number of zones
     taz_data = inject.get_injectable('taz_data')
     nzones = len(taz_data)
 
     # read network data
-    base_sqlite_file = data_file_path(setting('base_sqlite_file'))
-    build_sqlite_file = data_file_path(setting('build_sqlite_file'))
-
-    base_net = network.Network(network_settings, base_sqlite_file)
-    build_net = network.Network(network_settings, build_sqlite_file)
+    base_net = network.Network(network_settings)
+    build_net = network.Network(network_settings)
 
     # calculate derived network attributes
     coef_walk = trips_settings.get('route_varcoef_walk')
@@ -81,9 +78,6 @@ def incremental_demand():
         # read base trip table into matrix
         base_trips = read_matrix(table)
 
-        if base_trips.size == 0:
-            print('\n%s is empty or missing' % table)
-            continue
         # calculate base walk and bike utilities
         base_bike_util = base_bike_skim * trips_settings.get('bike_skim_coef')
         base_walk_util = base_walk_skim * trips_settings.get('walk_skim_coef')

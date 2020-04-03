@@ -65,15 +65,7 @@ def initial_demand():
         # read in trip tables
         base_trips = read_matrix(trip_table)
 
-        if base_trips.size == 0:
-            print('\n%s is empty or missing' % trip_table)
-            continue
-
         base_motor_util = read_matrix(motutil_table)
-
-        if base_motor_util.size == 0:
-            print('\n%s is empty or missing' % motutil_table)
-            continue
 
         base_bike_util = base_bike_skim * trips_settings.get('bike_skim_coef')
         base_walk_util = base_walk_skim * trips_settings.get('walk_skim_coef')

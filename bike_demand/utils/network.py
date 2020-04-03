@@ -620,16 +620,14 @@ class Network():
 
     def load_trip_matrix(self, trips, load_name, taz_nodes, varcoef, max_cost=None):
 
-        max_taz = max(taz_nodes.keys()) + 1
+        for i, ataz in enumerate(taz_nodes.keys()):
 
-        for i in taz_nodes.keys():
-
-            centroid = taz_nodes[i]
+            centroid = taz_nodes[ataz]
             paths = self.single_source_dijkstra(centroid, varcoef, max_cost=max_cost)[1]
 
-            for j in taz_nodes.keys():
+            for j, btaz in enumerate(taz_nodes.keys()):
 
-                target = taz_nodes[j]
+                target = taz_nodes[btaz]
 
                 if target in paths and trips[i,j] > 0:
                     for k in range(len(paths[target])-1):

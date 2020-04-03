@@ -35,10 +35,6 @@ def benefits():
         base_trips = read_matrix(table)
         build_trips = read_matrix(table)
 
-        if base_trips.size == 0 or build_trips.size == 0:
-            print('%s is empty or missing' % table)
-            continue
-
         # calculate difference in trips
         delta_trips = delta_trips + build_trips - base_trips
 

@@ -3,38 +3,28 @@ import csv
 import numpy as np
 
 from activitysim.core import inject
-from activitysim.core.config import (
-    setting,
-    data_file_path,
-    output_file_path,
-    read_model_settings)
+from activitysim.core.config import setting, output_file_path
 
-from ..utils import (network, output)
+from ..utils import network
 from ..utils.io import read_matrix
 
 
 def assign_demand():
 
     # initialize configuration data
-    network_settings = read_model_settings('network.yaml')
-    trips_settings = read_model_settings('trips.yaml')
+    network_settings = inject.get_injectable('network_settings')
+    trips_settings = inject.get_injectable('trips_settings')
+
+    taz_data = inject.get_injectable('taz_data')
 
     # store number of zones
-    max_zone = setting('max_zone') + 1
+    nzones = len(taz_data)
 
     # read network data
-    base_sqlite_file = data_file_path(setting('base_sqlite_file'))
-    build_sqlite_file = data_file_path(setting('build_sqlite_file'))
-    base_net = network.Network(network_settings, base_sqlite_file)
-    build_net = network.Network(network_settings, build_sqlite_file)
+    base_net = network.Network(network_settings)
+    build_net = network.Network(network_settings)
 
     add_derived_network_attributes(base_net)
-
-    taz_data = read_taz_from_sqlite(base_sqlite_file,
-                                    setting('taz_table_name'),
-                                    index_col=setting('taz_table_name'),
-                                    columns=[setting('taz_node_column'),
-                                             setting('taz_county_column')])
 
     taz_nodes = {}
     taz_county = {}
@@ -42,20 +32,14 @@ def assign_demand():
         taz_nodes[taz] = taz_data[taz][setting('taz_node_column')]
         taz_county[taz] = taz_data[taz][setting('taz_county_column')]
 
-    total_demand = np.zeros((max_zone, max_zone))
+    total_demand = np.zeros((nzones, nzones))
 
     print('getting demand matrices...')
     for segment in trips_settings.get('segments'):
 
         table = segment + trips_settings.get('trip_table_suffix')
 
-        base_trips = read_matrix_from_sqlite(
-            base_sqlite_file, table,
-            trips_settings.get('trip_ataz_col'), trips_settings.get('trip_ptaz_col'))
-
-        if base_trips.size == 0:
-            print('%s is empty or missing' % table)
-            continue
+        base_trips = read_matrix(table)
 
         bike_trips = base_trips[:, :, 6]
 
@@ -65,8 +49,8 @@ def assign_demand():
         print('')
         print(('segment ' + table))
         print('non-intrazonal bike trips')
-        print(int(np.sum(bike_trips * (np.ones((max_zone, max_zone)) -
-                                       np.diag(np.ones(max_zone))))))
+        print(int(np.sum(bike_trips * (np.ones((nzones, nzones)) -
+                                       np.diag(np.ones(nzones))))))
 
         total_demand = total_demand + bike_trips
 
