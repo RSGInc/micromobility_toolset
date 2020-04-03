@@ -15,18 +15,10 @@ def incremental_demand():
     # store number of zones
     nzones = inject.get_injectable('num_zones')
 
-    base_bike_skim = inject.get_injectable('bike_skim')
-    build_bike_skim = inject.get_injectable('bike_skim').copy()
-
-    # print('writing results...')
-    # output.write_matrix_to_sqlite(build_bike_skim,
-    #                               build_sqlite_file,
-    #                               'bike_skim',
-    #                               ['value'])
+    bike_skim = inject.get_injectable('bike_skim')
 
     # fix build walk skims to zero, not needed for incremental model
-    base_walk_skim = np.zeros((nzones, nzones))
-    build_walk_skim = np.zeros((nzones, nzones))
+    walk_skim = np.zeros((nzones, nzones))
 
     # don't report zero divide in np arrayes
     np.seterr(divide='ignore', invalid='ignore')
@@ -42,12 +34,12 @@ def incremental_demand():
         base_trips = read_matrix(table)
 
         # calculate base walk and bike utilities
-        base_bike_util = base_bike_skim * trips_settings.get('bike_skim_coef')
-        base_walk_util = base_walk_skim * trips_settings.get('walk_skim_coef')
+        base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
+        base_walk_util = walk_skim * trips_settings.get('walk_skim_coef')
 
-        # calculate build walk and bike utilities
-        build_bike_util = build_bike_skim * trips_settings.get('bike_skim_coef')
-        build_walk_util = build_walk_skim * trips_settings.get('walk_skim_coef')
+        # create initial build utilities
+        build_bike_util = base_bike_util.copy()
+        build_walk_util = base_walk_util.copy()
 
         # if not nhb, average PA and AP bike utilities
         if table != 'nhbtrip':
@@ -55,11 +47,11 @@ def incremental_demand():
             build_bike_util = 0.5 * (build_bike_util + np.transpose(build_bike_util))
 
         # create 0-1 availability matrices when skim > 0
-        walk_avail = (base_walk_skim > 0) + np.diag(np.ones(nzones))
+        walk_avail = (walk_skim > 0) + np.diag(np.ones(nzones))
         if table != 'nhbtrip':
-            bike_avail = (base_bike_skim > 0) * np.transpose(base_bike_skim > 0) + np.diag(np.ones(nzones))
+            bike_avail = (bike_skim > 0) * np.transpose(bike_skim > 0) + np.diag(np.ones(nzones))
         else:
-            bike_avail = (base_bike_skim > 0) + np.diag(np.ones(nzones))
+            bike_avail = (bike_skim > 0) + np.diag(np.ones(nzones))
 
         # non-available gets extreme negative utility
         base_bike_util = bike_avail * base_bike_util - 999 * ( 1 - bike_avail )
