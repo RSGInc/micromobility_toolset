@@ -45,6 +45,15 @@ def assign_demand():
     print('assigning trips...')
 
     base_net = inject.get_injectable('base_network')
+    taz_nodes = inject.get_injectable('taz_nodes')
+    coef_bike = trips_settings.get('route_varcoef_bike')
+    max_cost_bike = trips_settings.get('max_cost_bike')
+
+    base_net.assign_trip_matrix(trips=total_demand,
+                                load_name='bike_vol',
+                                taz_nodes=taz_nodes,
+                                varcoef=coef_bike,
+                                max_cost=max_cost_bike)
 
     with open(output_file_path('bike_vol.csv'), 'w') as f:
         writer = csv.writer(f)

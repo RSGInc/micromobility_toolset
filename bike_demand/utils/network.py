@@ -621,7 +621,7 @@ class Network():
         # Don't include intrazonal values
         return skim_matrix * (np.ones((nzones, nzones)) - np.diag(np.ones(nzones)))
 
-    def load_trip_matrix(self, trips, load_name, taz_nodes, varcoef, max_cost=None):
+    def assign_trip_matrix(self, trips, load_name, taz_nodes, varcoef, max_cost=None):
 
         for i, ataz in enumerate(taz_nodes.keys()):
 
@@ -658,6 +658,7 @@ class Network():
         self.add_edge_attribute('dart') # distance on arterials
         self.add_edge_attribute('dne3loc') # distance on locals with no bike route
         self.add_edge_attribute('dne2art') # distance on arterials with no bike lane
+        self.add_edge_attribute('bike_vol')
 
         # loop over edges and calculate derived values
         for a in self.adjacency:
@@ -687,6 +688,7 @@ class Network():
                 self.set_edge_attribute_value( (a,b), 'dart', distance * ( fhwa_fc in [1,2,6,11,12,14,77] ) )
                 self.set_edge_attribute_value( (a,b), 'dne3loc', distance * ( fhwa_fc in [19,9] ) * ( bike_class != 3 ) )
                 self.set_edge_attribute_value( (a,b), 'dne2art', distance * ( fhwa_fc in [1,2,6,11,12,14,77] ) * ( bike_class != 2 ) )
+                self.set_edge_attribute_value( (a,b), 'bike_vol',0)
 
         # add new dual (link-to-link) attribute columns
         self.add_dual_attribute('thru_centroid') # from centroid connector to centroid connector
