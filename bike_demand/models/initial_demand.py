@@ -5,8 +5,8 @@ from activitysim.core.config import setting
 
 from ..utils.io import (
     load_util_table,
-    load_trip_matrix,
-    save_trip_matrix)
+    load_taz_matrix,
+    save_taz_matrix)
 
 
 def initial_demand():
@@ -24,7 +24,7 @@ def initial_demand():
     for segment in trips_settings.get('segments'):
 
         # read in trip tables
-        base_trips = load_trip_matrix(segment)
+        base_trips = load_taz_matrix(segment)
         base_motor_util = load_util_table(segment)
 
         base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
@@ -82,7 +82,7 @@ def initial_demand():
         build_trips[:, :, 5] = build_walk_trips
         build_trips[:, :, 6] = build_bike_trips
 
-        save_trip_matrix(build_trips, segment)
+        save_taz_matrix(build_trips, segment)
 
         print('final trips')
         print('total motorized walk bike')

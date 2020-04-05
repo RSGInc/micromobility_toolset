@@ -78,7 +78,7 @@ def auto_skim():
     n_settings = inject.get_injectable('network_settings')
     auto_skim_file = n_settings.get('auto_skim_file')
 
-    return read_matrix(data_file_path(auto_skim_file))
+    return read_taz_matrix(data_file_path(auto_skim_file))
 
 
 @inject.injectable(cache=True)
@@ -116,10 +116,22 @@ def load_util_table(segment):
     t_settings = inject.get_injectable('trips_settings')
     table_file = t_settings.get('motorized_util_files').get(segment)
 
-    return read_matrix(data_file_path(table_file))
+    return read_taz_matrix(data_file_path(table_file))
 
 
-def load_trip_matrix(segment, base=False):
+def read_taz_matrix(file_name):
+
+    t_settings = inject.get_injectable('trips_settings')
+    taz_l = inject.get_injectable('taz_list')
+
+    skim = Skim.from_csv(file_name,
+                         t_settings.get('trip_ataz_col'),
+                         t_settings.get('trip_ptaz_col'),
+                         mapping=taz_l)
+
+    return skim.to_numpy()
+
+def load_taz_matrix(segment, base=False):
 
     t_settings = inject.get_injectable('trips_settings')
     table_file = t_settings.get('trip_files').get(segment)
@@ -141,10 +153,10 @@ def load_trip_matrix(segment, base=False):
             file_path = build_file_path
 
     # print('reading %s from %s' % (segment, file_path))
-    return read_matrix(file_path)
+    return read_taz_matrix(file_path)
 
 
-def save_trip_matrix(matrix, name, col_names=None):
+def save_taz_matrix(matrix, name, col_names=None):
 
     t_settings = inject.get_injectable('trips_settings')
 
@@ -166,14 +178,13 @@ def save_trip_matrix(matrix, name, col_names=None):
     skim.to_csv(output_file_path(table_file))
 
 
-def read_matrix(file_name):
+def save_node_matrix(matrix, name):
 
-    t_settings = inject.get_injectable('trips_settings')
-    taz_l = inject.get_injectable('taz_list')
+    n_settings = inject.get_injectable('network_settings')
+    node_list = list(inject.get_injectable('base_network').nodes.keys())
 
-    skim = Skim.from_csv(file_name,
-                         t_settings.get('trip_ataz_col'),
-                         t_settings.get('trip_ptaz_col'),
-                         mapping=taz_l)
-
-    return skim.to_numpy()
+    Skim(matrix,
+         mapping=node_list,
+         orig_col=n_settings.get('from_name'),
+         dest_col=n_settings.get('to_name'),
+         col_names=[name]).to_csv(output_file_path(name))

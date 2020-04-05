@@ -1,12 +1,11 @@
-import csv
-
 import numpy as np
 
 from activitysim.core.inject import get_injectable
-from activitysim.core.config import setting, output_file_path
 
-from ..utils import network
-from ..utils.io import load_trip_matrix
+from ..utils.io import (
+    load_taz_matrix,
+    save_taz_matrix,
+    save_node_matrix)
 
 
 def assign_demand():
@@ -21,7 +20,7 @@ def assign_demand():
     print('getting demand matrices...')
     for segment in trips_settings.get('segments'):
 
-        base_trips = load_trip_matrix(segment)
+        base_trips = load_taz_matrix(segment)
 
         ####################################
         # FIX: don't hard code these indices!
@@ -49,19 +48,27 @@ def assign_demand():
     coef_bike = trips_settings.get('route_varcoef_bike')
     max_cost_bike = trips_settings.get('max_cost_bike')
 
-    base_net.assign_trip_matrix(trips=total_demand,
-                                load_name='bike_vol',
-                                taz_nodes=taz_nodes,
-                                varcoef=coef_bike,
-                                max_cost=max_cost_bike)
+    print('')
+    print('trip sum')
+    print(np.sum(total_demand))
 
-    with open(output_file_path('bike_vol.csv'), 'w') as f:
-        writer = csv.writer(f)
+    base_net.load_attribute_matrix(trips=total_demand,
+                                   load_name='bike_vol',
+                                   taz_nodes=taz_nodes,
+                                   varcoef=coef_bike,
+                                   max_cost=max_cost_bike)
 
-        print('writing results...')
-        for a in base_net.adjacency:
-            for b in base_net.adjacency[a]:
-                writer.writerow([a, b, base_net.get_edge_attribute_value((a, b), 'bike_vol')])
+    bike_vol = base_net.get_attribute_matrix('bike_vol')
+
+    print('')
+    print('network sum')
+    print(np.sum(bike_vol))
+
+    print('')
+    print('writing results...')
+    save_node_matrix(bike_vol, 'bike_vol')
+
+    print('done.')
 
 
 if __name__ == '__main__':

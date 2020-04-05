@@ -607,21 +607,31 @@ class Network():
         nzones = len(taz_nodes)
         skim_matrix = np.zeros((nzones, nzones))
 
-        for i in taz_nodes.keys():
+        for i, ataz in enumerate(taz_nodes.keys()):
 
-            centroid = taz_nodes[i]
+            centroid = taz_nodes[ataz]  # node id
             costs = self.single_source_dijkstra(centroid, varcoef, max_cost=max_cost)[0]
 
-            for j in taz_nodes.keys():
+            for j, btaz in enumerate(taz_nodes.keys()):
 
-                if taz_nodes[j] in costs:
-                    skim_matrix[list(taz_nodes.keys()).index(i),
-                                list(taz_nodes.keys()).index(j)] = costs[taz_nodes[j]]
+                if taz_nodes[btaz] in costs:
+                    skim_matrix[i, j] = costs[taz_nodes[btaz]]
 
         # Don't include intrazonal values
         return skim_matrix * (np.ones((nzones, nzones)) - np.diag(np.ones(nzones)))
 
-    def assign_trip_matrix(self, trips, load_name, taz_nodes, varcoef, max_cost=None):
+    def get_attribute_matrix(self, attribute_name):
+
+        num_nodes = len(self.nodes)
+        matrix = np.zeros((num_nodes, num_nodes))
+
+        for i, anode in enumerate(self.adjacency):
+            for j, bnode in enumerate(self.adjacency[anode]):
+                matrix[i, j] = self.get_edge_attribute_value((anode, bnode), attribute_name)
+
+        return matrix
+
+    def load_attribute_matrix(self, trips, load_name, taz_nodes, varcoef, max_cost=None):
 
         for i, ataz in enumerate(taz_nodes.keys()):
 

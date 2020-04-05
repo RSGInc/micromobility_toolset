@@ -5,7 +5,7 @@ from activitysim.core.inject import get_injectable
 from activitysim.core.config import setting
 
 from ..utils import network
-from ..utils.io import load_trip_matrix, save_trip_matrix
+from ..utils.io import load_taz_matrix, save_taz_matrix
 
 
 def incremental_demand():
@@ -29,7 +29,7 @@ def incremental_demand():
     for segment in trips_settings.get('segments'):
 
         # use trips from previous step, if present
-        base_trips = load_trip_matrix(segment)
+        base_trips = load_taz_matrix(segment)
 
         # calculate base walk and bike utilities
         base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
@@ -97,7 +97,7 @@ def incremental_demand():
         build_trips[:,:,5] = build_walk_trips
         build_trips[:,:,6] = build_bike_trips
 
-        save_trip_matrix(build_trips, segment)
+        save_taz_matrix(build_trips, segment)
 
         # log build trips to console
         print('build trips')
