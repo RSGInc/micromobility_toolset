@@ -144,21 +144,24 @@ def load_trip_matrix(segment, base=False):
     return read_matrix(file_path)
 
 
-def save_trip_matrix(matrix, segment):
+def save_trip_matrix(matrix, name, col_names=None):
 
     t_settings = inject.get_injectable('trips_settings')
+
+    if not col_names:
+        col_names = t_settings.get('modes')
 
     skim = Skim(matrix,
                 mapping=inject.get_injectable('taz_list'),
                 orig_col=t_settings.get('trip_ataz_col'),
                 dest_col=t_settings.get('trip_ptaz_col'),
-                col_names=t_settings.get('modes'))
+                col_names=col_names)
 
     t_settings = inject.get_injectable('trips_settings')
-    table_file = t_settings.get('trip_files').get(segment)
+    table_file = t_settings.get('trip_files').get(name, name)
 
     # save the skim for later steps
-    inject.add_injectable(segment, skim)
+    inject.add_injectable(name, skim)
 
     skim.to_csv(output_file_path(table_file))
 

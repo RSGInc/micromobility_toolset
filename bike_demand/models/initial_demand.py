@@ -3,7 +3,10 @@ import numpy as np
 from activitysim.core.inject import get_injectable
 from activitysim.core.config import setting
 
-from ..utils.io import load_util_table, load_trip_matrix, save_trip_matrix
+from ..utils.io import (
+    load_util_table,
+    load_trip_matrix,
+    save_trip_matrix)
 
 
 def initial_demand():

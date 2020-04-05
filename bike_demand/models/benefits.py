@@ -3,7 +3,7 @@ import numpy as np
 from activitysim.core import inject
 from activitysim.core.config import setting
 
-from ..utils.io import load_trip_matrix
+from ..utils.io import load_trip_matrix, save_trip_matrix
 
 
 def benefits():
@@ -70,11 +70,14 @@ def benefits():
         print('Change in g. ' + pollutant[0] + ': ', int(np.sum(delta_pollutants[:, :, idx])))
 
     print('')
-    # print('writing to disk...')
-    # output.write_matrix_to_sqlite(user_ben,resources.application_config.build_sqlite_file,'user_ben',['minutes'])
-    # output.write_matrix_to_sqlite(delta_trips,resources.application_config.build_sqlite_file,'chg_trips',resources.mode_choice_config.modes)
-    # output.write_matrix_to_sqlite(delta_miles,resources.application_config.build_sqlite_file,'chg_vmt',['value'])
-    # output.write_matrix_to_sqlite(delta_pollutants,resources.application_config.build_sqlite_file,'chg_emissions',resources.application_config.pollutants)
+    print('writing to disk...')
+
+    save_trip_matrix(user_ben, 'user_ben', col_names=['minutes'])
+    save_trip_matrix(delta_trips, 'chg_trips')
+    save_trip_matrix(delta_miles, 'chg_vmt', col_names=['value'])
+    save_trip_matrix(delta_pollutants, 'chg_emissions', col_names=list(setting('pollutants').keys()))
+
+    print('done.')
 
 if __name__ == '__main__':
     benefits()
