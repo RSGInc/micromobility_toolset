@@ -1,7 +1,6 @@
 import argparse
 import numpy as np
 
-from activitysim.core.pipeline import add_checkpoint
 from activitysim.core.inject import get_injectable
 from activitysim.core.config import setting
 
@@ -29,7 +28,7 @@ def incremental_demand():
     # loop over market segments
     for segment in trips_settings.get('segments'):
 
-        # read base trip table into matrix
+        # use trips from previous step, if present
         base_trips = load_trip_matrix(segment)
 
         # calculate base walk and bike utilities

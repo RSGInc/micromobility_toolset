@@ -1,10 +1,9 @@
 import numpy as np
 
-from activitysim.core.pipeline import add_checkpoint
 from activitysim.core.inject import get_injectable
 from activitysim.core.config import setting
 
-from ..utils.io import load_util_table, load_trip_matrix
+from ..utils.io import load_util_table, load_trip_matrix, save_trip_matrix
 
 
 def initial_demand():
@@ -80,7 +79,7 @@ def initial_demand():
         build_trips[:, :, 5] = build_walk_trips
         build_trips[:, :, 6] = build_bike_trips
 
-        # output.write_matrix_to_sqlite(build_trips,resources.application_config.base_sqlite_file,resources.mode_choice_config.trip_tables[idx],resources.mode_choice_config.modes)
+        save_trip_matrix(build_trips, segment)
 
         print('final trips')
         print('total motorized walk bike')

@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 
 from activitysim.core import inject
@@ -117,23 +119,28 @@ def load_util_table(segment):
     return read_matrix(data_file_path(table_file))
 
 
-def load_trip_matrix(segment, build=False):
+def load_trip_matrix(segment, base=False):
 
     t_settings = inject.get_injectable('trips_settings')
     table_file = t_settings.get('trip_files').get(segment)
 
-    if build:
+    file_path = data_file_path(table_file)
+
+    # use trip from previous step
+    if not base:
         skim = inject.get_injectable(segment, default=None)
+
         if skim:
-            print('loading cached skim %s' % segment)
+
+            # print('loading cached skim %s' % segment)
             return skim.to_numpy()
 
-        file_path = output_file_path(table_file)
+        build_file_path = output_file_path(table_file)
 
-    else:
-        file_path = data_file_path(table_file)
+        if os.path.exists(build_file_path):
+            file_path = build_file_path
 
-    print('reading %s from %s' % (segment, file_path))
+    # print('reading %s from %s' % (segment, file_path))
     return read_matrix(file_path)
 
 
