@@ -30,6 +30,20 @@ modes:
     - wk
     - bk
 
+auto_modes:
+    - da
+    - s2
+    - s3
+    - wt
+    - dt
+
+walk_modes:
+    - wt
+    - wk
+
+bike_modes:
+    - bk
+
 trip_files:
     hbw1: hbw1trip.csv
     hbw2: hbw2trip.csv

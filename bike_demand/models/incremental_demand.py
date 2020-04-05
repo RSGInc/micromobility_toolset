@@ -1,21 +1,22 @@
 import argparse
 import numpy as np
 
-from activitysim.core import inject
+from activitysim.core.pipeline import add_checkpoint
+from activitysim.core.inject import get_injectable
 from activitysim.core.config import setting
 
 from ..utils import network
-from ..utils.io import load_trip_matrix
+from ..utils.io import load_trip_matrix, save_trip_matrix
 
 
 def incremental_demand():
     # initialize configuration data
-    trips_settings = inject.get_injectable('trips_settings')
+    trips_settings = get_injectable('trips_settings')
 
     # store number of zones
-    nzones = inject.get_injectable('num_zones')
+    nzones = get_injectable('num_zones')
 
-    bike_skim = inject.get_injectable('bike_skim')
+    bike_skim = get_injectable('bike_skim')
 
     # fix build walk skims to zero, not needed for incremental model
     walk_skim = np.zeros((nzones, nzones))
@@ -97,11 +98,7 @@ def incremental_demand():
         build_trips[:,:,5] = build_walk_trips
         build_trips[:,:,6] = build_bike_trips
 
-        # write matrix to database
-        # output.write_matrix_to_sqlite(build_trips,
-        #                               build_sqlite_file,
-        #                               table,
-        #                               trips_settings.get('modes'))
+        save_trip_matrix(build_trips, segment)
 
         # log build trips to console
         print('build trips')

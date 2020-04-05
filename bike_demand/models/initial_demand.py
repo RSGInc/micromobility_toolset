@@ -1,6 +1,7 @@
 import numpy as np
 
-from activitysim.core import inject
+from activitysim.core.pipeline import add_checkpoint
+from activitysim.core.inject import get_injectable
 from activitysim.core.config import setting
 
 from ..utils.io import load_util_table, load_trip_matrix
@@ -8,12 +9,12 @@ from ..utils.io import load_util_table, load_trip_matrix
 
 def initial_demand():
     # initialize configuration data
-    trips_settings = inject.get_injectable('trips_settings')
+    trips_settings = get_injectable('trips_settings')
 
-    nzones = inject.get_injectable('num_zones')
+    nzones = get_injectable('num_zones')
 
-    walk_skim = inject.get_injectable('walk_skim')
-    bike_skim = inject.get_injectable('bike_skim')
+    walk_skim = get_injectable('walk_skim')
+    bike_skim = get_injectable('bike_skim')
 
     np.seterr(divide='ignore', invalid='ignore')
 

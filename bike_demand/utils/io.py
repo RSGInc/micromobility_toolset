@@ -1,22 +1,25 @@
 import pandas as pd
 
-from .skim import Skim
-from .network import Network
-
 from activitysim.core import inject
 from activitysim.core.config import (
     setting,
     data_file_path,
+    output_file_path,
     read_model_settings)
+
+from .skim import Skim
+from .network import Network
 
 
 @inject.injectable(cache=True)
 def network_settings():
+
     return read_model_settings('network.yaml')
 
 
 @inject.injectable(cache=True)
 def trips_settings():
+
     return read_model_settings('trips.yaml')
 
 
@@ -73,7 +76,8 @@ def auto_skim():
     n_settings = inject.get_injectable('network_settings')
     auto_skim_file = n_settings.get('auto_skim_file')
 
-    return load_matrix(auto_skim_file)
+    return read_matrix(data_file_path(auto_skim_file))
+
 
 @inject.injectable(cache=True)
 def bike_skim():
@@ -84,8 +88,8 @@ def bike_skim():
 
     print('skimming bike_skim from network...')
     matrix = net.get_skim_matrix(tazs,
-        t_settings.get('route_varcoef_bike'),
-        max_cost=t_settings.get('max_cost_bike'))
+                                 t_settings.get('route_varcoef_bike'),
+                                 max_cost=t_settings.get('max_cost_bike'))
 
     return matrix
 
@@ -99,8 +103,8 @@ def walk_skim():
 
     print('skimming walk_skim from network...')
     matrix = net.get_skim_matrix(tazs,
-        t_settings.get('route_varcoef_walk'),
-        max_cost=t_settings.get('max_cost_walk'))
+                                 t_settings.get('route_varcoef_walk'),
+                                 max_cost=t_settings.get('max_cost_walk'))
 
     return matrix
 
@@ -110,23 +114,54 @@ def load_util_table(segment):
     t_settings = inject.get_injectable('trips_settings')
     table_file = t_settings.get('motorized_util_files').get(segment)
 
-    return load_matrix(table_file)
+    return read_matrix(data_file_path(table_file))
 
 
-def load_trip_matrix(segment):
+def load_trip_matrix(segment, build=False):
 
     t_settings = inject.get_injectable('trips_settings')
     table_file = t_settings.get('trip_files').get(segment)
 
-    return load_matrix(table_file)
+    if build:
+        skim = inject.get_injectable(segment, default=None)
+        if skim:
+            print('loading cached skim %s' % segment)
+            return skim.to_numpy()
+
+        file_path = output_file_path(table_file)
+
+    else:
+        file_path = data_file_path(table_file)
+
+    print('reading %s from %s' % (segment, file_path))
+    return read_matrix(file_path)
 
 
-def load_matrix(file_name):
+def save_trip_matrix(matrix, segment):
+
+    t_settings = inject.get_injectable('trips_settings')
+
+    skim = Skim(matrix,
+                mapping=inject.get_injectable('taz_list'),
+                orig_col=t_settings.get('trip_ataz_col'),
+                dest_col=t_settings.get('trip_ptaz_col'),
+                col_names=t_settings.get('modes'))
+
+    t_settings = inject.get_injectable('trips_settings')
+    table_file = t_settings.get('trip_files').get(segment)
+
+    # save the skim for later steps
+    inject.add_injectable(segment, skim)
+
+    skim.to_csv(output_file_path(table_file))
+
+
+def read_matrix(file_name):
 
     t_settings = inject.get_injectable('trips_settings')
     taz_l = inject.get_injectable('taz_list')
 
-    skim = Skim.from_csv(data_file_path(file_name),
+    skim = Skim.from_csv(file_name,
                          t_settings.get('trip_ataz_col'),
                          t_settings.get('trip_ptaz_col'),
                          mapping=taz_l)

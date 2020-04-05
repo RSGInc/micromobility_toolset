@@ -31,7 +31,7 @@ def benefits():
 
         # read in trip tables
         base_trips = load_trip_matrix(segment)
-        build_trips = load_trip_matrix(segment)
+        build_trips = load_trip_matrix(segment, build=True)
 
         # calculate difference in trips
         delta_trips = delta_trips + build_trips - base_trips

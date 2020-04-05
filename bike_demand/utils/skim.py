@@ -43,6 +43,7 @@ class Skim():
 
         self._set_mapping(mapping)
         self._set_num_cols()
+        self._set_index(orig_col, dest_col)
         self._set_col_names(col_names)
 
     def from_dataframe(self, data, mapping=None,
@@ -112,6 +113,7 @@ class Skim():
 
         self._set_mapping(mapping)
         self._set_num_cols()
+        self._set_index(orig_col, dest_col)
         self._set_col_names(col_names)
 
     def _set_mapping(self, mapping):
@@ -137,6 +139,11 @@ class Skim():
         else:
             self._num_cols = self._matrix.shape[2]
 
+    def _set_index(self, orig_col, dest_col):
+
+        self._orig_col = orig_col
+        self._dest_col = dest_col
+
     def _set_col_names(self, col_names):
 
         if not col_names:
@@ -155,9 +162,12 @@ class Skim():
 
     def to_dataframe(self):
 
-        multi_index = [
-            np.repeat(self._mapping, self._length),
-            np.tile(self._mapping, self._length)]
+        multi_index = pd.MultiIndex.from_arrays(
+            [
+                np.repeat(self._mapping, self._length),
+                np.tile(self._mapping, self._length)
+            ],
+            names=[self._orig_col, self._dest_col])
 
         data = self._matrix.reshape(self._length ** 2, self._num_cols)
 

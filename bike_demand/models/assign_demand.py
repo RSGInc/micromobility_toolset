@@ -2,7 +2,7 @@ import csv
 
 import numpy as np
 
-from activitysim.core import inject
+from activitysim.core.inject import get_injectable
 from activitysim.core.config import setting, output_file_path
 
 from ..utils import network
@@ -12,9 +12,9 @@ from ..utils.io import load_trip_matrix
 def assign_demand():
 
     # initialize configuration data
-    trips_settings = inject.get_injectable('trips_settings')
+    trips_settings = get_injectable('trips_settings')
 
-    nzones = inject.get_injectable('num_zones')
+    nzones = get_injectable('num_zones')
 
     total_demand = np.zeros((nzones, nzones))
 
@@ -44,8 +44,8 @@ def assign_demand():
     print('')
     print('assigning trips...')
 
-    base_net = inject.get_injectable('base_network')
-    taz_nodes = inject.get_injectable('taz_nodes')
+    base_net = get_injectable('base_network')
+    taz_nodes = get_injectable('taz_nodes')
     coef_bike = trips_settings.get('route_varcoef_bike')
     max_cost_bike = trips_settings.get('max_cost_bike')
 

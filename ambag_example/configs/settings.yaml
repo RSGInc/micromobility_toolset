@@ -8,6 +8,10 @@ models:
 # base_sqlite_file: example.db
 # build_sqlite_file: example.db
 
+use_csv: True
+use_sqlite: False
+use_hdf: False
+
 # taz table name and column names
 taz_table_name: taz
 taz_taz_column: taz

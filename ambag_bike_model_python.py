@@ -25,8 +25,8 @@ def run():
     args = parser.parse_args()
 
     inject.add_injectable('configs_dir', 'ambag_example/configs')
-    inject.add_injectable('data_dir', 'ambag_example/data')
-    inject.add_injectable('output_dir', 'ambag_example/output')
+    inject.add_injectable('data_dir', 'ambag_example/base')
+    inject.add_injectable('output_dir', 'ambag_example/build')
 
     inject.add_step('initial_demand', initial_demand)
     inject.add_step('incremental_demand', incremental_demand)
