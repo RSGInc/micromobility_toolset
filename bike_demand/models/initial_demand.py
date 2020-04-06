@@ -44,16 +44,14 @@ def initial_demand():
         base_bike_util = base_bike_util - 999 * (1 - bike_avail)
         base_walk_util = base_walk_util - 999 * (1 - walk_avail)
 
-        ####################################
-        # FIX: don't hard code these indices!
-        #
-        # use trip mode list
-        ####################################
-        motorized_trips = np.sum(base_trips[:, :, :5], 2)
-        nonmotor_trips = np.sum(base_trips[:, :, 5:], 2)
-        walk_trips = base_trips[:, :, 5]
-        bike_trips = base_trips[:, :, 6]
-        total_trips = motorized_trips + nonmotor_trips
+        midxs = get_injectable('auto_mode_indices')
+        widxs = get_injectable('walk_mode_indices')
+        bidxs = get_injectable('bike_mode_indices')
+
+        motorized_trips = np.sum(np.take(base_trips, midxs, axis=2), 2)
+        bike_trips = np.sum(np.take(base_trips, bidxs, axis=2), 2)
+        walk_trips = np.sum(np.take(base_trips, widxs, axis=2), 2)
+        total_trips = motorized_trips + bike_trips + walk_trips
 
         print('')
         print('segment ' + segment)
@@ -69,18 +67,21 @@ def initial_demand():
         build_walk_trips = total_trips * np.nan_to_num(np.exp(base_walk_util) / denom)
         build_bike_trips = total_trips * np.nan_to_num(np.exp(base_bike_util) / denom)
 
-        ####################################
-        # FIX: don't hard code these indices!
-        #
-        # use trip mode list
-        ####################################
         build_trips = base_trips.copy()
-        for motorized_idx in range(5):
+        for motorized_idx in midxs:
             build_trips[:, :, motorized_idx] = \
                 base_trips[:, :, motorized_idx] * \
-                    np.nan_to_num(build_motor_trips / motorized_trips)
-        build_trips[:, :, 5] = build_walk_trips
-        build_trips[:, :, 6] = build_bike_trips
+                np.nan_to_num(build_motor_trips / motorized_trips)
+
+        for bike_idx in bidxs:
+            build_trips[:, :, bike_idx] = \
+                base_trips[:, :, bike_idx] * \
+                np.nan_to_num(build_bike_trips / bike_trips)
+
+        for walk_idx in widxs:
+            build_trips[:, :, walk_idx] = \
+                base_trips[:, :, walk_idx] * \
+                np.nan_to_num(build_walk_trips / walk_trips)
 
         save_taz_matrix(build_trips, segment)
 

@@ -17,10 +17,11 @@ segments:
     - nwk4
     - nhb
 
+# from and to columns for trip tables
 trip_ataz_col: ataz
 trip_ptaz_col: ptaz
 
-# modes in order of columns in csv files
+# modes in order of columns in trip tables
 modes:
     - da
     - s2
@@ -38,7 +39,6 @@ auto_modes:
     - dt
 
 walk_modes:
-    - wt
     - wk
 
 bike_modes:

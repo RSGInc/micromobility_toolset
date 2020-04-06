@@ -1,6 +1,6 @@
 import numpy as np
 
-from activitysim.core import inject
+from activitysim.core.inject import get_injectable
 from activitysim.core.config import setting
 
 from ..utils.io import load_taz_matrix, save_taz_matrix
@@ -8,13 +8,16 @@ from ..utils.io import load_taz_matrix, save_taz_matrix
 
 def benefits():
     # initialize configuration data
-    trips_settings = inject.get_injectable('trips_settings')
+    trips_settings = get_injectable('trips_settings')
 
     # get number of zones to dimension matrices
-    nzones = inject.get_injectable('num_zones')
+    nzones = get_injectable('num_zones')
 
     # read auto times and distances
-    auto_skim = inject.get_injectable('auto_skim')
+    auto_skim = get_injectable('auto_skim')
+
+    # get matrix indices for bike modes
+    bidxs = get_injectable('bike_mode_indices')
 
     # initialize empty matrices
     delta_trips = np.zeros((nzones, nzones, len(trips_settings.get('modes'))))
@@ -36,30 +39,36 @@ def benefits():
         # calculate difference in trips
         delta_trips = delta_trips + build_trips - base_trips
 
+        base_bike_trips = np.sum(np.take(base_trips, bidxs, axis=2), 2)
+        build_bike_trips = np.sum(np.take(build_trips, bidxs, axis=2), 2)
+
         # calculate logsums
-        ####################################
-        # FIX: don't hard code these indices!
-        #
-        # use trip mode list
-        ####################################
-        base_logsum = np.log(1.0 + np.nan_to_num(base_trips[:, :, 6] /
-                            (np.sum(base_trips, 2) - base_trips[:, :, 6])))
-        build_logsum = np.log(1.0 + np.nan_to_num(build_trips[:, :, 6] /
-                              (np.sum(build_trips, 2) - build_trips[:, :, 6])))
+        base_logsum = np.log(1.0 + \
+            np.nan_to_num(base_bike_trips / (np.sum(base_trips, 2) - base_bike_trips)))
+        build_logsum = np.log(1.0 + \
+            np.nan_to_num(build_bike_trips / (np.sum(build_trips, 2) - build_bike_trips)))
 
         # calculate user benefits
         user_ben = user_ben - np.sum(base_trips, 2) * \
             (build_logsum - base_logsum) / trips_settings.get('ivt_coef')[segment]
 
     # calculate difference in vmt and vehicle minutes of travel
-    delta_minutes = auto_skim[:, :, 0] * (delta_trips[:, :, 0] +
-        delta_trips[:, :, 1] / 2.0 + delta_trips[:, :, 2] / setting('sr3_avg_occ'))
-    delta_miles = auto_skim[:, :, 1] * (delta_trips[:, :, 0] +
-        delta_trips[:, :, 1] / 2.0 + delta_trips[:, :, 2] / setting('sr3_avg_occ'))
+    #######################################
+    # FIX: don't use hardcoded skim indexes
+    #######################################
+    delta_minutes = auto_skim[:, :, 0] * \
+        (delta_trips[:, :, 0] +
+         delta_trips[:, :, 1] / 2.0 +
+         delta_trips[:, :, 2] / setting('sr3_avg_occ'))
+
+    delta_miles = auto_skim[:, :, 1] * \
+        (delta_trips[:, :, 0] +
+         delta_trips[:, :, 1] / 2.0 +
+         delta_trips[:, :, 2] / setting('sr3_avg_occ'))
 
     print('')
     print('User benefits (min.): ', int(np.sum(user_ben)))
-    print('Change in bike trips: ', int(np.sum(delta_trips[:, :, 6])))
+    print('Change in bike trips: ', int(np.sum(np.take(delta_trips, bidxs, axis=2))))
     print('Change in VMT: ', int(np.sum(delta_miles)))
 
     # calculate difference in pollutants

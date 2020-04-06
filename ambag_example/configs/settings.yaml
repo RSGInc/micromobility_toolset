@@ -10,12 +10,16 @@ models:
 
 use_csv: True
 use_sqlite: False
-use_hdf: False
+# use_hdf: False
 
 # taz table name and column names
-taz_table_name: taz
+taz_file_name: taz.csv
 taz_taz_column: taz
 taz_node_column: node_id
+
+auto_skim_file: auto_skim.csv
+# time_column: time
+# distance_column: dist
 
 # should tracing be performed in incremental logit, and for which zones and segment
 # trace: False

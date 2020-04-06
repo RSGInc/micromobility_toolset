@@ -28,8 +28,8 @@ def trips_settings():
 @inject.injectable(cache=True)
 def taz_df():
 
-    taz_df = pd.read_csv(data_file_path(setting('taz_table_name') + '.csv'),
-                         index_col=setting('taz_table_name'))
+    taz_df = pd.read_csv(data_file_path(setting('taz_file_name')),
+                         index_col=setting('taz_taz_column'))
 
     print('loaded %s zones' % str(taz_df.shape[0]))
 
@@ -75,8 +75,7 @@ def base_network():
 
 @inject.injectable(cache=True)
 def auto_skim():
-    n_settings = inject.get_injectable('network_settings')
-    auto_skim_file = n_settings.get('auto_skim_file')
+    auto_skim_file = setting('auto_skim_file')
 
     return read_taz_matrix(data_file_path(auto_skim_file))
 
@@ -109,6 +108,36 @@ def walk_skim():
                                  max_cost=t_settings.get('max_cost_walk'))
 
     return matrix
+
+
+@inject.injectable()
+def auto_mode_indices():
+
+    t_settings = inject.get_injectable('trips_settings')
+    all_modes = t_settings.get('modes')
+    auto_modes = t_settings.get('auto_modes')
+
+    return [all_modes.index(mode) for mode in auto_modes]
+
+
+@inject.injectable()
+def bike_mode_indices():
+
+    t_settings = inject.get_injectable('trips_settings')
+    all_modes = t_settings.get('modes')
+    bike_modes = t_settings.get('bike_modes')
+
+    return [all_modes.index(mode) for mode in bike_modes]
+
+
+@inject.injectable()
+def walk_mode_indices():
+
+    t_settings = inject.get_injectable('trips_settings')
+    all_modes = t_settings.get('modes')
+    walk_modes = t_settings.get('walk_modes')
+
+    return [all_modes.index(mode) for mode in walk_modes]
 
 
 def load_util_table(segment):

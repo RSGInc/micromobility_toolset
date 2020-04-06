@@ -14,20 +14,14 @@ def assign_demand():
     trips_settings = get_injectable('trips_settings')
 
     nzones = get_injectable('num_zones')
-
+    bidxs = get_injectable('bike_mode_indices')
     total_demand = np.zeros((nzones, nzones))
 
     print('getting demand matrices...')
     for segment in trips_settings.get('segments'):
 
         base_trips = load_taz_matrix(segment)
-
-        ####################################
-        # FIX: don't hard code these indices!
-        #
-        # use trip mode list
-        ####################################
-        bike_trips = base_trips[:, :, 6]
+        bike_trips = np.sum(np.take(base_trips, bidxs, axis=2), 2)
 
         if segment != 'nhb':
             bike_trips = 0.5 * (bike_trips + np.transpose(bike_trips))
