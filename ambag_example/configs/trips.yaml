@@ -172,3 +172,11 @@ bike_asc:
 # more coefficients
 walk_intrazonal: -0.613
 bike_intrazonal: -1.720
+
+# parameters for emissions estimation
+pollutants:
+    CO2:
+        grams_per_mile: 311.0
+        grams_per_minute: 79.0
+
+sr3_avg_occ: 3.25

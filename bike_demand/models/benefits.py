@@ -62,12 +62,12 @@ def benefits():
     delta_minutes = auto_skim[:, :, 0] * \
         (delta_trips[:, :, 0] +
          delta_trips[:, :, 1] / 2.0 +  # shared ride 2
-         delta_trips[:, :, 2] / setting('sr3_avg_occ'))  # shared ride 3
+         delta_trips[:, :, 2] / trips_settings.get('sr3_avg_occ'))  # shared ride 3
 
     delta_miles = auto_skim[:, :, 1] * \
         (delta_trips[:, :, 0] +
          delta_trips[:, :, 1] / 2.0 +  # shared ride 2
-         delta_trips[:, :, 2] / setting('sr3_avg_occ'))  # shared ride 3
+         delta_trips[:, :, 2] / trips_settings.get('sr3_avg_occ'))  # shared ride 3
 
     print('')
     print('User benefits (min.): ', int(np.sum(user_ben)))
@@ -75,8 +75,9 @@ def benefits():
     print('Change in VMT: ', int(np.sum(delta_miles)))
 
     # calculate difference in pollutants
-    delta_pollutants = np.zeros((nzones, nzones, len(setting('pollutants').keys())))
-    for idx, pollutant in enumerate(setting('pollutants').items()):
+    pollutants_dict = trips_settings.get('pollutants')
+    delta_pollutants = np.zeros((nzones, nzones, len(pollutants_dict.keys())))
+    for idx, pollutant in enumerate(pollutants_dict.items()):
         delta_pollutants[:, :, idx] = delta_miles * pollutant[1]['grams_per_mile'] + \
             delta_minutes * pollutant[1]['grams_per_minute']
         print('Change in g. ' + pollutant[0] + ': ', int(np.sum(delta_pollutants[:, :, idx])))
@@ -87,7 +88,7 @@ def benefits():
     save_taz_matrix(user_ben, 'user_ben', col_names=['minutes'])
     save_taz_matrix(delta_trips, 'chg_trips')
     save_taz_matrix(delta_miles, 'chg_vmt', col_names=['value'])
-    save_taz_matrix(delta_pollutants, 'chg_emissions', col_names=list(setting('pollutants').keys()))
+    save_taz_matrix(delta_pollutants, 'chg_emissions', col_names=list(pollutants_dict.keys()))
 
     print('done.')
 

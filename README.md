@@ -5,23 +5,23 @@ This repository contains the software and input test data required to run the AM
 1. Clone this repository.
 2. Run the Python script to generate incremental demand:
    ```
-   python ambag_bike_model_python.py --type incremental_demand --base ambag_example/data/example.db --build ambag_example/data/example.db
+   python ambag_bike_model.py --type incremental_demand
    ```
 3. Run the Python script to quantify benefits of the changes:
    ```
-   python ambag_bike_model_python.py --type benefits --base ambag_example/data/example.db --build ambag_example/data/example.db
+   python ambag_bike_model.py --type benefits
    ```
 3. Run the Python script to assign demand counts to the changes:
   ```
-  python ambag_bike_model_python.py --type assign_demand --base ambag_example/data/example.db --build ambag_example/data/example.db
+  python ambag_bike_model.py --type assign_demand
   ```
 
 ### Outputs
 
-Running the model in "incremental demand" mode will generate network level-of-serivce matrices (skims) and incremental demand matrices.  Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones:
+Running the model in "incremental demand" mode will generate network level-of-service matrices (skims) and incremental demand matrices.  Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones:
 - **auto_skim** - i, j, time, dist
-- **bike_skim** - i, j, value
-- **walk_skim** - i, j, value
+- **bike_skim** - i, j, dist
+- **walk_skim** - i, j, dist
 
 Running the model in "benefits" mode will generate the following three tables of outputs:
 - **chg_emissions** - i, j, CO2
@@ -32,10 +32,7 @@ Running the model in "benefits" mode will generate the following three tables of
 ## Input test data
 The full test database is available [here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf).
 
-The 25-zone example can be found in ``ambag_example/data/``. Both databases contain the following tables:
-
-### project
-- **project_info** - key, value (name, creator, time, source project, etc.)
+The 25-zone example can be found in ``ambag_example/base/``. Both datasets contain the following inputs:
 
 ### network
 The network is defined by the following tables:
@@ -54,12 +51,6 @@ The network is defined by the following tables:
    - ba_ivt: in-vehicle time in reverse dir
 - **node**
    - node id: node id
-   - x_coord: x coordinate
-   - y_coord: y coordinate
-   - z_coord: z coordinate
-- **linkpoint**
-   - id: link id for link shaping
-   - pointno: shape point number
    - x_coord: x coordinate
    - y_coord: y coordinate
    - z_coord: z coordinate
