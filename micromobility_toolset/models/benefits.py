@@ -7,7 +7,7 @@ from ..utils.io import load_taz_matrix, save_taz_matrix
 
 
 @step()
-def benefits():
+def bike_benefits():
     # initialize configuration data
     trips_settings = get_injectable('trips_settings')
 
@@ -93,4 +93,4 @@ def benefits():
     print('done.')
 
 if __name__ == '__main__':
-    benefits()
+    bike_benefits()

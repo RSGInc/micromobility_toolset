@@ -9,7 +9,7 @@ This repository contains the software and input test data required to run the AM
    ```
 3. Run the Python script to quantify benefits of the changes:
    ```
-   python ambag_bike_model.py --type benefits
+   python ambag_bike_model.py --type bike_benefits
    ```
 3. Run the Python script to assign demand counts to the changes:
   ```

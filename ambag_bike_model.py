@@ -4,10 +4,10 @@ from activitysim.core import pipeline
 from activitysim.core import inject
 from activitysim.core.config import setting
 
-from bike_demand.models import (
+from micromobility_toolset.models import (
     initial_demand,
     incremental_demand,
-    benefits,
+    bike_benefits,
     assign_demand)
 
 
@@ -16,7 +16,7 @@ def run():
     models = [
         'initial_demand',
         'incremental_demand',
-        'benefits',
+        'bike_benefits',
         'assign_demand'
     ]
 

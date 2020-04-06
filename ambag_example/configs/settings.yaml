@@ -1,7 +1,7 @@
 models:
   - initial_demand
   - incremental_demand
-  - benefits
+  - bike_benefits
   - assign_demand
 
 use_csv: True
