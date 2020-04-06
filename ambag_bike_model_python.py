@@ -28,11 +28,6 @@ def run():
     inject.add_injectable('data_dir', 'ambag_example/base')
     inject.add_injectable('output_dir', 'ambag_example/build')
 
-    inject.add_step('initial_demand', initial_demand)
-    inject.add_step('incremental_demand', incremental_demand)
-    inject.add_step('benefits', benefits)
-    inject.add_step('assign_demand', assign_demand)
-
     if args.type:
         pipeline.run(models=[args.type])
     else:

@@ -1,13 +1,14 @@
 import argparse
 import numpy as np
 
-from activitysim.core.inject import get_injectable
+from activitysim.core.inject import step, get_injectable
 from activitysim.core.config import setting
 
 from ..utils import network
 from ..utils.io import load_taz_matrix, save_taz_matrix
 
 
+@step()
 def incremental_demand():
     # initialize configuration data
     trips_settings = get_injectable('trips_settings')

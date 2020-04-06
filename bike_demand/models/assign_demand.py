@@ -1,6 +1,6 @@
 import numpy as np
 
-from activitysim.core.inject import get_injectable
+from activitysim.core.inject import step, get_injectable
 
 from ..utils.io import (
     load_taz_matrix,
@@ -8,6 +8,7 @@ from ..utils.io import (
     save_node_matrix)
 
 
+@step()
 def assign_demand():
 
     # initialize configuration data

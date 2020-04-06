@@ -1,11 +1,12 @@
 import numpy as np
 
-from activitysim.core.inject import get_injectable
+from activitysim.core.inject import step, get_injectable
 from activitysim.core.config import setting
 
 from ..utils.io import load_taz_matrix, save_taz_matrix
 
 
+@step()
 def benefits():
     # initialize configuration data
     trips_settings = get_injectable('trips_settings')
