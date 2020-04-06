@@ -75,30 +75,63 @@ def base_network(trips_settings, network_settings):
 def auto_skim():
     auto_skim_file = setting('auto_skim_file')
 
+    # 3 dimensional matrix with time and distance
+    print('reading auto_skim from disk...')
     return read_taz_matrix(data_file_path(auto_skim_file))
 
 
 @inject.injectable(cache=True)
 def bike_skim(trips_settings, base_network, taz_nodes):
 
-    print('skimming bike_skim from network...')
-    matrix = base_network.get_skim_matrix(taz_nodes,
-                                          trips_settings.get('route_varcoef_bike'),
-                                          max_cost=trips_settings.get('max_cost_bike'))
+    skim_file = setting('bike_skim_file')
 
-    print(matrix.shape)
-    return matrix
+    try:
+        file_path = data_file_path(skim_file)
+
+        print('reading bike_skim from disk...')
+        return read_taz_matrix(file_path)
+
+    except RuntimeError:  # raised if file not found
+
+        print('skimming bike_skim from network...')
+        matrix = base_network.get_skim_matrix(taz_nodes,
+                                              trips_settings.get('route_varcoef_bike'),
+                                              max_cost=trips_settings.get('max_cost_bike'))
+
+        if setting('save_bike_skim'):
+
+            print('saving bike_skim to disk...')
+            dist_col = setting('skim_distance_column', default='dist')
+            save_taz_matrix(matrix, skim_file, col_names=[dist_col])
+
+        return matrix
 
 
 @inject.injectable(cache=True)
 def walk_skim(trips_settings, base_network, taz_nodes):
 
-    print('skimming walk_skim from network...')
-    matrix = base_network.get_skim_matrix(taz_nodes,
-                                          trips_settings.get('route_varcoef_walk'),
-                                          max_cost=trips_settings.get('max_cost_walk'))
+    skim_file = setting('walk_skim_file')
 
-    return matrix
+    try:
+        file_path = data_file_path(skim_file)
+
+        print('reading walk_skim from disk...')
+        return read_taz_matrix(file_path)
+
+    except RuntimeError:  # raised if file not found
+
+        print('skimming walk_skim from network...')
+        matrix = base_network.get_skim_matrix(taz_nodes,
+                                              trips_settings.get('route_varcoef_walk'),
+                                              max_cost=trips_settings.get('max_cost_walk'))
+
+        if setting('save_walk_skim'):
+
+            print('saving walk_skim to disk...')
+            dist_col = setting('skim_distance_column', default='dist')
+            save_taz_matrix(matrix, skim_file, col_names=[dist_col])
+
+        return matrix
 
 
 @inject.injectable()
