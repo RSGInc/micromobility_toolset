@@ -47,26 +47,24 @@ def taz_nodes():
 
 
 @inject.injectable(cache=True)
-def taz_list():
+def taz_list(taz_df):
 
-    return list(inject.get_injectable('taz_df').index)
-
-
-@inject.injectable(cache=True)
-def num_zones():
-
-    return len(inject.get_injectable('taz_list'))
+    return list(taz_df.index)
 
 
 @inject.injectable(cache=True)
-def base_network():
-    t_settings = inject.get_injectable('trips_settings')
-    n_settings = inject.get_injectable('network_settings')
+def num_zones(taz_list):
 
-    net = Network(n_settings)
+    return len(taz_list)
+
+
+@inject.injectable(cache=True)
+def base_network(trips_settings, network_settings):
+
+    net = Network(network_settings)
     # calculate derived network attributes
-    coef_walk = t_settings.get('route_varcoef_walk')
-    coef_bike = t_settings.get('route_varcoef_bike')
+    coef_walk = trips_settings.get('route_varcoef_walk')
+    coef_bike = trips_settings.get('route_varcoef_bike')
 
     net.add_derived_network_attributes(coef_walk=coef_walk, coef_bike=coef_bike)
 
@@ -81,89 +79,79 @@ def auto_skim():
 
 
 @inject.injectable(cache=True)
-def bike_skim():
-
-    t_settings = inject.get_injectable('trips_settings')
-    net = inject.get_injectable('base_network')
-    tazs = inject.get_injectable('taz_nodes')
+def bike_skim(trips_settings, base_network, taz_nodes):
 
     print('skimming bike_skim from network...')
-    matrix = net.get_skim_matrix(tazs,
-                                 t_settings.get('route_varcoef_bike'),
-                                 max_cost=t_settings.get('max_cost_bike'))
+    matrix = base_network.get_skim_matrix(taz_nodes,
+                                          trips_settings.get('route_varcoef_bike'),
+                                          max_cost=trips_settings.get('max_cost_bike'))
 
+    print(matrix.shape)
     return matrix
 
 
 @inject.injectable(cache=True)
-def walk_skim():
-
-    t_settings = inject.get_injectable('trips_settings')
-    net = inject.get_injectable('base_network')
-    tazs = inject.get_injectable('taz_nodes')
+def walk_skim(trips_settings, base_network, taz_nodes):
 
     print('skimming walk_skim from network...')
-    matrix = net.get_skim_matrix(tazs,
-                                 t_settings.get('route_varcoef_walk'),
-                                 max_cost=t_settings.get('max_cost_walk'))
+    matrix = base_network.get_skim_matrix(taz_nodes,
+                                          trips_settings.get('route_varcoef_walk'),
+                                          max_cost=trips_settings.get('max_cost_walk'))
 
     return matrix
 
 
 @inject.injectable()
-def auto_mode_indices():
+def auto_mode_indices(trips_settings):
 
-    t_settings = inject.get_injectable('trips_settings')
-    all_modes = t_settings.get('modes')
-    auto_modes = t_settings.get('auto_modes')
+    all_modes = trips_settings.get('modes')
+    auto_modes = trips_settings.get('auto_modes')
 
     return [all_modes.index(mode) for mode in auto_modes]
 
 
 @inject.injectable()
-def bike_mode_indices():
+def bike_mode_indices(trips_settings):
 
-    t_settings = inject.get_injectable('trips_settings')
-    all_modes = t_settings.get('modes')
-    bike_modes = t_settings.get('bike_modes')
+    all_modes = trips_settings.get('modes')
+    bike_modes = trips_settings.get('bike_modes')
 
     return [all_modes.index(mode) for mode in bike_modes]
 
 
 @inject.injectable()
-def walk_mode_indices():
+def walk_mode_indices(trips_settings):
 
-    t_settings = inject.get_injectable('trips_settings')
-    all_modes = t_settings.get('modes')
-    walk_modes = t_settings.get('walk_modes')
+    all_modes = trips_settings.get('modes')
+    walk_modes = trips_settings.get('walk_modes')
 
     return [all_modes.index(mode) for mode in walk_modes]
 
 
 def load_util_table(segment):
 
-    t_settings = inject.get_injectable('trips_settings')
-    table_file = t_settings.get('motorized_util_files').get(segment)
+    trips_settings = inject.get_injectable('trips_settings')
+    table_file = trips_settings.get('motorized_util_files').get(segment)
 
     return read_taz_matrix(data_file_path(table_file))
 
 
 def read_taz_matrix(file_name):
 
-    t_settings = inject.get_injectable('trips_settings')
+    trips_settings = inject.get_injectable('trips_settings')
     taz_l = inject.get_injectable('taz_list')
 
     skim = Skim.from_csv(file_name,
-                         t_settings.get('trip_ataz_col'),
-                         t_settings.get('trip_ptaz_col'),
+                         trips_settings.get('trip_ataz_col'),
+                         trips_settings.get('trip_ptaz_col'),
                          mapping=taz_l)
 
     return skim.to_numpy()
 
 def load_taz_matrix(segment, base=False):
 
-    t_settings = inject.get_injectable('trips_settings')
-    table_file = t_settings.get('trip_files').get(segment)
+    trips_settings = inject.get_injectable('trips_settings')
+    table_file = trips_settings.get('trip_files').get(segment)
 
     file_path = data_file_path(table_file)
 
@@ -187,19 +175,19 @@ def load_taz_matrix(segment, base=False):
 
 def save_taz_matrix(matrix, name, col_names=None):
 
-    t_settings = inject.get_injectable('trips_settings')
+    trips_settings = inject.get_injectable('trips_settings')
 
     if not col_names:
-        col_names = t_settings.get('modes')
+        col_names = trips_settings.get('modes')
 
     skim = Skim(matrix,
                 mapping=inject.get_injectable('taz_list'),
-                orig_col=t_settings.get('trip_ataz_col'),
-                dest_col=t_settings.get('trip_ptaz_col'),
+                orig_col=trips_settings.get('trip_ataz_col'),
+                dest_col=trips_settings.get('trip_ptaz_col'),
                 col_names=col_names)
 
-    t_settings = inject.get_injectable('trips_settings')
-    table_file = t_settings.get('trip_files').get(name, name)
+    trips_settings = inject.get_injectable('trips_settings')
+    table_file = trips_settings.get('trip_files').get(name, name)
 
     # save the skim for later steps
     inject.add_injectable(name, skim)
@@ -209,11 +197,11 @@ def save_taz_matrix(matrix, name, col_names=None):
 
 def save_node_matrix(matrix, name):
 
-    n_settings = inject.get_injectable('network_settings')
+    network_settings = inject.get_injectable('network_settings')
     node_list = list(inject.get_injectable('base_network').nodes.keys())
 
     Skim(matrix,
          mapping=node_list,
-         orig_col=n_settings.get('from_name'),
-         dest_col=n_settings.get('to_name'),
+         orig_col=network_settings.get('from_name'),
+         dest_col=network_settings.get('to_name'),
          col_names=[name]).to_csv(output_file_path(name))
