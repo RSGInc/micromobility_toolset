@@ -1,4 +1,6 @@
 auto_skim_file: example.db
+
+# output file names
 bike_skim_file: bike_skim.csv
 walk_skim_file: walk_skim.csv
 

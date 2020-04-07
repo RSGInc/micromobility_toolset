@@ -9,7 +9,7 @@ from ..utils.io import (
 
 
 @step()
-def bike_benefits():
+def benefits():
     # initialize configuration data
     trips_settings = get_injectable('trips_settings')
 
@@ -61,15 +61,17 @@ def bike_benefits():
     #######################################
     # FIX: don't use hardcoded skim indexes
     #######################################
-    delta_minutes = auto_skim[:, :, 0] * \
-        (delta_trips[:, :, 0] +
-         delta_trips[:, :, 1] / 2.0 +  # shared ride 2
-         delta_trips[:, :, 2] / trips_settings.get('sr3_avg_occ'))  # shared ride 3
+    occupancy_dict = trips_settings.get('occupancy')
+    all_modes = trips_settings.get('modes')
 
-    delta_miles = auto_skim[:, :, 1] * \
-        (delta_trips[:, :, 0] +
-         delta_trips[:, :, 1] / 2.0 +  # shared ride 2
-         delta_trips[:, :, 2] / trips_settings.get('sr3_avg_occ'))  # shared ride 3
+    delta_minutes = auto_skim[:, :, 0]
+    delta_miles = auto_skim[:, :, 1]
+    for mode, denom in occupancy_dict.items():
+        idx = all_modes.index(mode)
+        delta_minutes = delta_minutes * (delta_trips[:, :, idx] / denom)
+        delta_miles = delta_miles * (delta_trips[:, :, idx] / denom)
+
+
 
     print('')
     print('User benefits (min.): ', int(np.sum(user_ben)))
@@ -95,4 +97,4 @@ def bike_benefits():
     print('done.')
 
 if __name__ == '__main__':
-    bike_benefits()
+    benefits()

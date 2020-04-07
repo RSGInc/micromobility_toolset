@@ -168,9 +168,9 @@ def load_skim(mode):
 def motorized_mode_indices(trips_settings):
 
     all_modes = trips_settings.get('modes')
-    auto_modes = trips_settings.get('motorized_modes')
+    motorized_modes = trips_settings.get('motorized_modes')
 
-    return [all_modes.index(mode) for mode in auto_modes]
+    return [all_modes.index(mode) for mode in motorized_modes]
 
 
 @inject.injectable()
@@ -239,7 +239,7 @@ def load_taz_matrix(segment, base=False):
             # print('loading cached skim %s' % segment)
             return skim.to_numpy()
 
-        build_file_path = output_file_path(table_file)
+        build_file_path = output_file_path(csv_file)
 
         if os.path.exists(build_file_path):
             file_path = build_file_path

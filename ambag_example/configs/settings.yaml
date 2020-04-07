@@ -1,8 +1,8 @@
 models:
   - initial_demand
   - incremental_demand
-  - bike_benefits
-  - assign_demand
+  - benefits
+  # - assign_demand
 
 
 # taz_file_name: taz.csv
