@@ -2,6 +2,7 @@ import random
 from math import atan2, pi
 import heapq
 
+import sqlite3
 import numpy as np
 import pandas as pd
 
@@ -28,6 +29,7 @@ class Network():
 
         self.read_links(
             network_settings.get('link_file'),
+            network_settings.get('link_table_name'),
             network_settings.get('from_name'),
             network_settings.get('to_name'),
             network_settings.get('link_attributes_by_direction')
@@ -35,6 +37,7 @@ class Network():
 
         self.read_nodes(
             network_settings.get('node_file'),
+            network_settings.get('node_table_name'),
             network_settings.get('node_name'),
             network_settings.get('node_attributes')
         )
@@ -57,6 +60,7 @@ class Network():
         self.create_dual()
 
     def read_links(self, file_name,
+                   table_name,
                    from_name,
                    to_name,
                    attributes_by_direction):
@@ -78,8 +82,24 @@ class Network():
             ab_columns.append(ab)
             ba_columns.append(ba)
 
+        columns = ab_columns + ba_columns + [from_name, to_name]
+
         file_name = data_file_path(file_name)
-        link_df = pd.read_csv(file_name, usecols=ab_columns + ba_columns + [from_name, to_name])
+
+        if file_name.endswith('.csv'):
+            link_df = pd.read_csv(file_name, usecols=columns)
+
+        elif file_name.endswith('.db'):
+            db_connection = sqlite3.connect(file_name)
+
+            link_df = pd.read_sql(f'select * from {table_name}',
+                                  db_connection,
+                                  columns=columns)
+
+            db_connection.close()
+
+        else:
+            raise TypeError(f"cannot read nodes from filetype {file_name}")
 
         ab_df = link_df[[from_name, to_name]].copy()
         ba_df = link_df[[from_name, to_name]].copy()
@@ -107,8 +127,7 @@ class Network():
         # put desired attribute names into network data structure
         self.adjacency_names = list(link_df.columns)
 
-
-    def read_nodes(self, file_name, node_name, attributes):
+    def read_nodes(self, file_name, table_name, node_name, attributes):
         """read links from sqlite database into network data structure, void
 
         file_name : name of link file
@@ -122,9 +141,24 @@ class Network():
         columns = list(attributes.values()) + [node_name]
 
         file_name = data_file_path(file_name)
-        node_df = pd.read_csv(file_name,
-                              index_col=node_name,
-                              usecols=columns)
+
+        if file_name.endswith('.csv'):
+            node_df = pd.read_csv(file_name,
+                                  index_col=node_name,
+                                  usecols=columns)
+
+        elif file_name.endswith('.db'):
+            db_connection = sqlite3.connect(file_name)
+
+            node_df = pd.read_sql(f'select * from {table_name}',
+                                  db_connection,
+                                  index_col=node_name,
+                                  columns=columns)
+
+            db_connection.close()
+
+        else:
+            raise TypeError(f"cannot read nodes from filetype {file_name}")
 
         self.nodes = dict(zip(node_df.index, node_df.to_numpy().tolist()))
 

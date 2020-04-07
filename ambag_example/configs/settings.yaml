@@ -7,7 +7,7 @@ models:
 
 # taz_file_name: taz.csv
 taz_file_name: example.db
-taz_table_name: taz # if using sqlite for taz file
+taz_table_name: taz # if using sqlite for taz table
 taz_taz_column: taz
 taz_node_column: node_id
 
