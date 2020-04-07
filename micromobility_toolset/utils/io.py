@@ -50,7 +50,7 @@ def taz_df():
         db_connection.close()
 
     else:
-        raise TypeError(f"cannot read TAZ filetype {os.path.basename(file_path)}")
+        raise TypeError(f'cannot read TAZ filetype {os.path.basename(file_path)}')
 
     print('loaded %s zones' % str(taz_df.shape[0]))
     return taz_df
@@ -93,15 +93,25 @@ def base_network(skims_settings, network_settings):
 
 @inject.injectable(cache=True)
 def auto_skim(skims_settings, taz_list):
-    auto_skim_file = skims_settings.get('auto_skim_file')
+    file_name = skims_settings.get('auto_skim_file')
+    table_name = skims_settings.get('auto_skim_table')
     ataz_col = skims_settings.get('skim_ataz_col')
     ptaz_col = skims_settings.get('skim_ptaz_col')
 
     # 3 dimensional matrix with time and distance
-    print('reading auto_skim from disk...')
-    skim = Skim.from_csv(data_file_path(auto_skim_file),
-                         ataz_col, ptaz_col,
-                         mapping=taz_list)
+    print(f'reading auto_skim from {file_name}...')
+    if file_name.endswith('.csv'):
+        skim = Skim.from_csv(data_file_path(file_name),
+                             ataz_col, ptaz_col,
+                             mapping=taz_list)
+
+    elif file_name.endswith('.db'):
+        skim = Skim.from_sqlite(data_file_path(file_name), table_name,
+                                ataz_col, ptaz_col,
+                                mapping=taz_list)
+
+    else:
+        raise TypeError(f"cannot read skim from filetype {file_name}")
 
     return skim
 

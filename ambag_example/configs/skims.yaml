@@ -1,14 +1,12 @@
-auto_skim_file: auto_skim.csv
+auto_skim_file: example.db
 bike_skim_file: bike_skim.csv
 walk_skim_file: walk_skim.csv
 
-# # tables for sqlite skims
-# auto_skim_table:
-# bike_skim_table:
-# walk_skim_table:
+# # table name for sqlite auto skim
+auto_skim_table: auto_skim
 
-skim_ataz_col: ataz
-skim_ptaz_col: ptaz
+skim_ataz_col: i
+skim_ptaz_col: j
 
 skim_distance_col: dist
 skim_time_col: time  # auto only
