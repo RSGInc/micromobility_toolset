@@ -44,6 +44,29 @@ walk_modes:
 bike_modes:
     - bk
 
+input_sqlite_db: example.db
+
+# if using sqlite for input trip tables
+trip_tables:
+    hbw1: hbw1trip
+    hbw2: hbw2trip
+    hbw3: hbw3trip
+    hbw4: hbw4trip
+    hscl1: hscl1trip
+    hscl2: hscl2trip
+    hscl3: hscl3trip
+    hscl4: hscl4trip
+    hunv1: hunv1trip
+    hunv2: hunv2trip
+    hunv3: hunv3trip
+    hunv4: hunv4trip
+    nwk1: nwk1trip
+    nwk2: nwk2trip
+    nwk3: nwk3trip
+    nwk4: nwk4trip
+    nhb: nhbtrip
+
+# output file names; and inputs if no input_sqlite_db
 trip_files:
     hbw1: hbw1trip.csv
     hbw2: hbw2trip.csv

@@ -50,7 +50,7 @@ def taz_df():
         db_connection.close()
 
     else:
-        raise TypeError(f"cannot read TAZ filetype {setting('taz_file_name')}")
+        raise TypeError(f"cannot read TAZ filetype {os.path.basename(file_path)}")
 
     print('loaded %s zones' % str(taz_df.shape[0]))
     return taz_df
@@ -189,27 +189,39 @@ def load_util_table(segment):
     return read_taz_matrix(data_file_path(table_file))
 
 
-def read_taz_matrix(file_name):
+def read_taz_matrix(file_name, table_name=None):
 
     trips_settings = inject.get_injectable('trips_settings')
     taz_l = inject.get_injectable('taz_list')
+    ataz_col = trips_settings.get('trip_ataz_col')
+    ptaz_col = trips_settings.get('trip_ptaz_col')
 
-    skim = Skim.from_csv(file_name,
-                         trips_settings.get('trip_ataz_col'),
-                         trips_settings.get('trip_ptaz_col'),
-                         mapping=taz_l)
+    if file_name.endswith('.csv'):
+        skim = Skim.from_csv(file_name, ataz_col, ptaz_col, mapping=taz_l)
+
+    elif file_name.endswith('.db'):
+        skim = Skim.from_sqlite(file_name, table_name,
+                                ataz_col, ptaz_col,
+                                mapping=taz_l)
+
+    else:
+        raise TypeError(f"cannot read matrix from filetype {os.path.basename(file_name)}")
 
     return skim.to_numpy()
 
 def load_taz_matrix(segment, base=False):
 
     trips_settings = inject.get_injectable('trips_settings')
-    table_file = trips_settings.get('trip_files').get(segment)
+    csv_file = trips_settings.get('trip_files').get(segment)
 
+    # use CSVs for input if no sqlite db provided
+    table_file = trips_settings.get('input_sqlite_db', csv_file)
+    table_name = trips_settings.get('trip_tables', {}).get(segment)
     file_path = data_file_path(table_file)
 
-    # use trip from previous step
     if not base:
+
+        # use trip from previous step
         skim = inject.get_injectable(segment, default=None)
 
         if skim:
@@ -222,8 +234,8 @@ def load_taz_matrix(segment, base=False):
         if os.path.exists(build_file_path):
             file_path = build_file_path
 
-    # print('reading %s from %s' % (segment, file_path))
-    return read_taz_matrix(file_path)
+    return read_taz_matrix(file_path, table_name=table_name)
+
 
 
 def save_taz_matrix(matrix, name, col_names=None):
