@@ -241,6 +241,7 @@ def load_taz_matrix(segment, base=False):
 
         build_file_path = output_file_path(csv_file)
 
+        # pick up where we left off, if possible
         if os.path.exists(build_file_path):
             file_path = build_file_path
 

@@ -1,3 +1,4 @@
+# auto_skim_file: auto_skim.csv
 auto_skim_file: example.db
 
 # output file names
@@ -10,8 +11,9 @@ auto_skim_table: auto_skim
 skim_ataz_col: i
 skim_ptaz_col: j
 
-skim_distance_col: dist
+# auto skim columns must be ordered 'time', 'dist' for now
 skim_time_col: time  # auto only
+skim_distance_col: dist
 
 save_bike_skim: True
 save_walk_skim: True
