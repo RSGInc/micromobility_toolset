@@ -4,12 +4,10 @@ models:
   - bike_benefits
   - assign_demand
 
-# taz table settings
-use_csv: True
-use_sqlite: False
 
-taz_file_name: taz.csv
-# taz_table_name:  # if use_sqlite: True
+# taz_file_name: taz.csv
+taz_file_name: example.db
+taz_table_name: taz # if using sqlite for taz file
 taz_taz_column: taz
 taz_node_column: node_id
 

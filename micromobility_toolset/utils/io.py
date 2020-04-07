@@ -1,4 +1,5 @@
 import os
+import sqlite3
 
 import pandas as pd
 
@@ -34,11 +35,24 @@ def skims_settings():
 @inject.injectable(cache=True)
 def taz_df():
 
-    taz_df = pd.read_csv(data_file_path(setting('taz_file_name')),
-                         index_col=setting('taz_taz_column'))
+    file_path = data_file_path(setting('taz_file_name'))
+
+    if file_path.endswith('.csv'):
+        taz_df = pd.read_csv(file_path, index_col=setting('taz_taz_column'))
+
+    elif file_path.endswith('.db'):
+        db_connection = sqlite3.connect(file_path)
+
+        taz_df = pd.read_sql(f"select * from {setting('taz_table_name')}",
+                             db_connection,
+                             index_col=setting('taz_taz_column'))
+
+        db_connection.close()
+
+    else:
+        raise TypeError(f"cannot read TAZ filetype {setting('taz_file_name')}")
 
     print('loaded %s zones' % str(taz_df.shape[0]))
-
     return taz_df
 
 
