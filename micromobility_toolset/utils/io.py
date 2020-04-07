@@ -52,7 +52,7 @@ def taz_df():
     else:
         raise TypeError(f'cannot read TAZ filetype {os.path.basename(file_path)}')
 
-    print('loaded %s zones' % str(taz_df.shape[0]))
+    print(f'loaded {taz_df.shape[0]} zones')
     return taz_df
 
 
@@ -122,7 +122,6 @@ def load_skim(mode):
 
     if skim:
 
-        # print('loading cached skim %s' % segment)
         return skim.to_numpy()
 
     taz_list = inject.get_injectable('taz_list')
@@ -134,7 +133,7 @@ def load_skim(mode):
 
     if os.path.exists(file_path):
 
-        print('loading %s skim from %s' % (mode, inject.get_injectable('output_dir')))
+        print(f"loading {mode} skim from {inject.get_injectable('output_dir')}")
         taz_l = inject.get_injectable('taz_list')
 
         skim = Skim.from_csv(file_path, ataz_col, ptaz_col, mapping=taz_list)
@@ -143,7 +142,7 @@ def load_skim(mode):
     net = inject.get_injectable('base_network')
     taz_nodes = inject.get_injectable('taz_nodes')
 
-    print('skimming %s skim from network...' % mode)
+    print(f'skimming {mode} skim from network...')
     matrix = net.get_skim_matrix(taz_nodes,
                                  skims_settings.get('route_varcoef_' + mode),
                                  max_cost=skims_settings.get('max_cost_' + mode))
@@ -156,9 +155,9 @@ def load_skim(mode):
 
     inject.add_injectable(mode + '_skim', skim)
 
-    if skims_settings.get('save_%s_skim' % mode, False):
+    if skims_settings.get(f'save_{mode}_skim', False):
 
-        print('saving %s skim to disk...' % mode)
+        print(f'saving {mode} skim to disk...')
         skim.to_csv(file_path)
 
     return matrix
@@ -215,7 +214,7 @@ def read_taz_matrix(file_name, table_name=None):
                                 mapping=taz_l)
 
     else:
-        raise TypeError(f"cannot read matrix from filetype {os.path.basename(file_name)}")
+        raise TypeError(f'cannot read matrix from filetype {os.path.basename(file_name)}')
 
     return skim.to_numpy()
 
@@ -236,7 +235,6 @@ def load_taz_matrix(segment, base=False):
 
         if skim:
 
-            # print('loading cached skim %s' % segment)
             return skim.to_numpy()
 
         build_file_path = output_file_path(csv_file)

@@ -32,11 +32,10 @@ class Skim():
         """
 
         if not len(data.shape) in [2, 3]:
-            raise IndexError(
-                'input matrix must be 2 or 3 dimensions, not %s' % len(data.shape))
+            raise IndexError(f'input matrix must be 2 or 3 dimensions, not {len(data.shape)}')
 
         if not data.shape[0] == data.shape[1]:
-            raise IndexError('matrix dimensions 1 and 2 do not match: %s' % str(data.shape))
+            raise IndexError(f'matrix dimensions 1 and 2 do not match: {data.shape}')
 
         self._matrix = data
         self._length = data.shape[0]
@@ -124,8 +123,8 @@ class Skim():
 
         elif isinstance(mapping, list) or isinstance(mapping, np.ndarray):
             if not len(mapping) == self._length:
-                raise IndexError('mapping of %s items cannot be applied to matrix '
-                                 'with shape %s' % (len(mapping), str(self._matrix.shape)))
+                raise IndexError(f'mapping of {len(mapping)} items cannot be applied to matrix '
+                                 f'with shape {self._matrix.shape}')
 
             self._mapping = np.array(mapping)
 

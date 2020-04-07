@@ -181,10 +181,10 @@ class Network():
                 del self.nodes[node]
 
         if stray_nodes:
-            print('removed %s stray nodes from network' % len(stray_nodes))
+            print(f'removed {len(stray_nodes)} stray nodes from network')
 
         if missing_nodes:
-            raise Exception('missing %s nodes from network: %s' % (len(missing_nodes), missing_nodes))
+            raise Exception(f'missing {len(missing_nodes)} nodes from network: {missing_nodes}')
 
     def get_edge_attribute_value(self,edge,name):
 
