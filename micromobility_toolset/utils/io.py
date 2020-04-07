@@ -26,6 +26,12 @@ def trips_settings():
 
 
 @inject.injectable(cache=True)
+def skims_settings():
+
+    return read_model_settings('skims.yaml')
+
+
+@inject.injectable(cache=True)
 def taz_df():
 
     taz_df = pd.read_csv(data_file_path(setting('taz_file_name')),
@@ -59,12 +65,12 @@ def num_zones(taz_list):
 
 
 @inject.injectable(cache=True)
-def base_network(trips_settings, network_settings):
+def base_network(skims_settings, network_settings):
 
     net = Network(network_settings)
     # calculate derived network attributes
-    coef_walk = trips_settings.get('route_varcoef_walk')
-    coef_bike = trips_settings.get('route_varcoef_bike')
+    coef_walk = skims_settings.get('route_varcoef_walk')
+    coef_bike = skims_settings.get('route_varcoef_bike')
 
     net.add_derived_network_attributes(coef_walk=coef_walk, coef_bike=coef_bike)
 
@@ -72,73 +78,73 @@ def base_network(trips_settings, network_settings):
 
 
 @inject.injectable(cache=True)
-def auto_skim():
-    auto_skim_file = setting('auto_skim_file')
+def auto_skim(skims_settings, taz_list):
+    auto_skim_file = skims_settings.get('auto_skim_file')
+    ataz_col = skims_settings.get('skim_ataz_col')
+    ptaz_col = skims_settings.get('skim_ptaz_col')
 
     # 3 dimensional matrix with time and distance
     print('reading auto_skim from disk...')
-    return read_taz_matrix(data_file_path(auto_skim_file))
+    skim = Skim.from_csv(data_file_path(auto_skim_file),
+                         ataz_col, ptaz_col,
+                         mapping=taz_list)
+
+    return skim
 
 
-@inject.injectable(cache=True)
-def bike_skim(trips_settings, base_network, taz_nodes):
+def load_skim(mode):
 
-    skim_file = setting('bike_skim_file')
+    skim = inject.get_injectable(mode + '_skim', default=None)
 
-    try:
-        file_path = data_file_path(skim_file)
+    if skim:
 
-        print('reading bike_skim from disk...')
-        return read_taz_matrix(file_path)
+        # print('loading cached skim %s' % segment)
+        return skim.to_numpy()
 
-    except RuntimeError:  # raised if file not found
+    taz_list = inject.get_injectable('taz_list')
+    skims_settings = inject.get_injectable('skims_settings')
+    skim_file = skims_settings.get(mode + '_skim_file')
+    ataz_col = skims_settings.get('skim_ataz_col')
+    ptaz_col = skims_settings.get('skim_ptaz_col')
+    file_path = output_file_path(skim_file)
 
-        print('skimming bike_skim from network...')
-        matrix = base_network.get_skim_matrix(taz_nodes,
-                                              trips_settings.get('route_varcoef_bike'),
-                                              max_cost=trips_settings.get('max_cost_bike'))
+    if os.path.exists(file_path):
 
-        if setting('save_bike_skim'):
+        print('loading %s skim from %s' % (mode, inject.get_injectable('output_dir')))
+        taz_l = inject.get_injectable('taz_list')
 
-            print('saving bike_skim to disk...')
-            dist_col = setting('skim_distance_column', default='dist')
-            save_taz_matrix(matrix, skim_file, col_names=[dist_col])
+        skim = Skim.from_csv(file_path, ataz_col, ptaz_col, mapping=taz_list)
+        return skim.to_numpy()
 
-        return matrix
+    net = inject.get_injectable('base_network')
+    taz_nodes = inject.get_injectable('taz_nodes')
 
+    print('skimming %s skim from network...' % mode)
+    matrix = net.get_skim_matrix(taz_nodes,
+                                 skims_settings.get('route_varcoef_' + mode),
+                                 max_cost=skims_settings.get('max_cost_' + mode))
 
-@inject.injectable(cache=True)
-def walk_skim(trips_settings, base_network, taz_nodes):
+    skim = Skim(matrix,
+                mapping=taz_list,
+                orig_col=ataz_col,
+                dest_col=ptaz_col,
+                col_names=[skims_settings.get('skim_distance_col', 'distance')])
 
-    skim_file = setting('walk_skim_file')
+    inject.add_injectable(mode + '_skim', skim)
 
-    try:
-        file_path = data_file_path(skim_file)
+    if skims_settings.get('save_%s_skim' % mode, False):
 
-        print('reading walk_skim from disk...')
-        return read_taz_matrix(file_path)
+        print('saving %s skim to disk...' % mode)
+        skim.to_csv(file_path)
 
-    except RuntimeError:  # raised if file not found
-
-        print('skimming walk_skim from network...')
-        matrix = base_network.get_skim_matrix(taz_nodes,
-                                              trips_settings.get('route_varcoef_walk'),
-                                              max_cost=trips_settings.get('max_cost_walk'))
-
-        if setting('save_walk_skim'):
-
-            print('saving walk_skim to disk...')
-            dist_col = setting('skim_distance_column', default='dist')
-            save_taz_matrix(matrix, skim_file, col_names=[dist_col])
-
-        return matrix
+    return matrix
 
 
 @inject.injectable()
-def auto_mode_indices(trips_settings):
+def motorized_mode_indices(trips_settings):
 
     all_modes = trips_settings.get('modes')
-    auto_modes = trips_settings.get('auto_modes')
+    auto_modes = trips_settings.get('motorized_modes')
 
     return [all_modes.index(mode) for mode in auto_modes]
 

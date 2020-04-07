@@ -4,24 +4,14 @@ models:
   - bike_benefits
   - assign_demand
 
+# taz table settings
 use_csv: True
 use_sqlite: False
-# use_hdf: False
 
-# taz table name and column names
 taz_file_name: taz.csv
+# taz_table_name:  # if use_sqlite: True
 taz_taz_column: taz
 taz_node_column: node_id
-
-auto_skim_file: auto_skim.csv
-bike_skim_file: bike_skim.csv
-walk_skim_file: walk_skim.csv
-
-skim_distance_column: dist
-skim_time_column: time
-
-save_bike_skim: True
-save_walk_skim: False
 
 # should tracing be performed in incremental logit, and for which zones and segment
 # trace: False

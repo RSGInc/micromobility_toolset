@@ -1,11 +1,11 @@
-import argparse
 import numpy as np
 
 from activitysim.core.inject import step, get_injectable
-from activitysim.core.config import setting
 
-from ..utils import network
-from ..utils.io import load_taz_matrix, save_taz_matrix
+from ..utils.io import (
+    load_skim,
+    load_taz_matrix,
+    save_taz_matrix)
 
 
 @step()
@@ -16,7 +16,7 @@ def incremental_demand():
     # store number of zones
     nzones = get_injectable('num_zones')
 
-    bike_skim = get_injectable('bike_skim')
+    bike_skim = load_skim('bike')
 
     # fix build walk skims to zero, not needed for incremental model
     walk_skim = np.zeros((nzones, nzones))
@@ -59,7 +59,7 @@ def incremental_demand():
         build_walk_util = walk_avail * build_walk_util - 999 * (1 - walk_avail)
 
         # split full trip matrix and sum up into motorized, nonmotorized, walk, bike, and total
-        midxs = get_injectable('auto_mode_indices')
+        midxs = get_injectable('motorized_mode_indices')
         widxs = get_injectable('walk_mode_indices')
         bidxs = get_injectable('bike_mode_indices')
 

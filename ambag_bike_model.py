@@ -4,24 +4,16 @@ from activitysim.core import pipeline
 from activitysim.core import inject
 from activitysim.core.config import setting
 
-from micromobility_toolset.models import (
-    initial_demand,
-    incremental_demand,
-    bike_benefits,
-    assign_demand)
+from micromobility_toolset import models
 
 
 def run():
 
-    models = [
-        'initial_demand',
-        'incremental_demand',
-        'bike_benefits',
-        'assign_demand'
-    ]
+    # step methods imported by the models module
+    types = [type for type in dir(models) if '__' not in type]
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--type', dest='type', action='store', choices=models)
+    parser.add_argument('--type', dest='type', action='store', choices=types)
     args = parser.parse_args()
 
     inject.add_injectable('configs_dir', 'ambag_example/configs')

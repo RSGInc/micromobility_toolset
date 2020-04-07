@@ -1,9 +1,11 @@
 import numpy as np
 
 from activitysim.core.inject import step, get_injectable
-from activitysim.core.config import setting
 
-from ..utils.io import load_taz_matrix, save_taz_matrix
+from ..utils.io import (
+    load_skim,
+    load_taz_matrix,
+    save_taz_matrix)
 
 
 @step()
@@ -15,7 +17,7 @@ def bike_benefits():
     nzones = get_injectable('num_zones')
 
     # read auto times and distances
-    auto_skim = get_injectable('auto_skim')
+    auto_skim = load_skim('auto')
 
     # get matrix indices for bike modes
     bidxs = get_injectable('bike_mode_indices')

@@ -3,18 +3,34 @@ This repository contains the software and input test data required to run the AM
 
 ## How To
 1. Clone this repository.
-2. Run the Python script to generate incremental demand:
+2. Run the Python script to generate initial demand:
+   ```
+   python ambag_bike_model.py --type initial_demand
+   ```
+3. Run the Python script to generate incremental demand:
    ```
    python ambag_bike_model.py --type incremental_demand
    ```
-3. Run the Python script to quantify benefits of the changes:
+4. Run the Python script to quantify benefits of the changes:
    ```
    python ambag_bike_model.py --type bike_benefits
    ```
-3. Run the Python script to assign demand counts to the changes:
+5. Run the Python script to assign demand counts to the changes:
   ```
   python ambag_bike_model.py --type assign_demand
   ```
+
+All steps may be run at once by leaving off the ``--type`` flag:
+```
+python ambag_bike_model.py
+```
+
+The network skims may also be generated separately from the model steps:
+```
+python ambag_bike_model.py --type skim_network
+```
+Note: skims are generated on-the-fly during the main model steps and the
+``skim_network`` step does not need to be run beforehand.
 
 ### Outputs
 

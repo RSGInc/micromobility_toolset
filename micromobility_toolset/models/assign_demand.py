@@ -13,6 +13,7 @@ def assign_demand():
 
     # initialize configuration data
     trips_settings = get_injectable('trips_settings')
+    skims_settings = get_injectable('skims_settings')
 
     nzones = get_injectable('num_zones')
     bidxs = get_injectable('bike_mode_indices')
@@ -40,8 +41,8 @@ def assign_demand():
 
     base_net = get_injectable('base_network')
     taz_nodes = get_injectable('taz_nodes')
-    coef_bike = trips_settings.get('route_varcoef_bike')
-    max_cost_bike = trips_settings.get('max_cost_bike')
+    coef_bike = skims_settings.get('route_varcoef_bike')
+    max_cost_bike = skims_settings.get('max_cost_bike')
 
     print('')
     print('trip sum')

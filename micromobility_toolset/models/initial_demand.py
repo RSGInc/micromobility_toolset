@@ -4,6 +4,7 @@ from activitysim.core.inject import step, get_injectable
 from activitysim.core.config import setting
 
 from ..utils.io import (
+    load_skim,
     load_util_table,
     load_taz_matrix,
     save_taz_matrix)
@@ -16,8 +17,8 @@ def initial_demand():
 
     nzones = get_injectable('num_zones')
 
-    walk_skim = get_injectable('walk_skim')
-    bike_skim = get_injectable('bike_skim')
+    walk_skim = load_skim('walk')
+    bike_skim = load_skim('bike')
 
     np.seterr(divide='ignore', invalid='ignore')
 
@@ -45,7 +46,7 @@ def initial_demand():
         base_bike_util = base_bike_util - 999 * (1 - bike_avail)
         base_walk_util = base_walk_util - 999 * (1 - walk_avail)
 
-        midxs = get_injectable('auto_mode_indices')
+        midxs = get_injectable('motorized_mode_indices')
         widxs = get_injectable('walk_mode_indices')
         bidxs = get_injectable('bike_mode_indices')
 
