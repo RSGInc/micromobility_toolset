@@ -7,6 +7,17 @@ from ..utils.io import load_skim
 
 @step()
 def skim_network():
+    """Skim the base network for bike and walk distance matrices.
+
+    This standalone step will generate 'base' skims for subsequent
+    model steps and will write skim files to the base directory.
+    If base skims already exist they will not be overwritten but
+    will be loaded and described by `print_skim_stats()`.
+
+    Network and skim configurations should be described in
+    'network.yaml' and 'skims.yaml' respectively.
+
+    """
 
     bike_skim = load_skim('bike', base=True)
     walk_skim = load_skim('walk', base=True)

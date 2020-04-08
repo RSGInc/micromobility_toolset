@@ -1,3 +1,51 @@
+"""io.py
+
+This module makes extensive use of ActivitySim's inject
+feature to keep track of in-memory objects.
+
+Frequently-used items such as configuration settings, taz-to-node
+mappings, skims, and trip tables are registered as cached
+'injectables'. This means an item won't be loaded until it is called
+and will persist for as long as the program is running or until
+it is overwritten.
+
+For example, calling
+
+    get_injectable('trips_settings')
+
+will read the trips configuration file 'trips.yaml' and store the
+resulting dictionary. Subsequent calls to `get_injectable('trips_settings')`
+will use the cached dictionary rather than reloading the file.
+
+This is especially useful for the 'base_network' injectable, which only
+needs to be built once, the first time it is called. Additional uses
+of the base network will then used the cached object, even across model steps.
+
+This module also contain methods that handle the re-caching of certain
+injectables. This can be necessary if certain objects are expected to change
+their values during and across model steps:
+
+    - `load_taz_matrix(segment)` will return an existing injectable
+    named 'segment' if present, but read the corresponding table from
+    disk if not found.
+
+    - `save_taz_matrix(matrix, name)` will write the numpy matrix to
+    disk but will also register it as an injectable named 'name'
+    (possibly overwriting an existing injectable of the same name)
+    to prevent re-reading the data.
+
+In this way, injectables serve as an in-memory 'build' directory. They
+keep track of the latest version of an object.
+
+For objects that have both 'build' and 'base' versions, such as trip
+matrices, supplying a `base=True` parameter will return a reloaded
+version from the 'base' folder instead of returning the cached version
+or reading from the build folder. In the case of `load_skim(mode, base=True)`
+the network will be re-skimmed unless a skim file already exists in
+the base directory.
+
+"""
+
 import os
 import sqlite3
 
@@ -56,7 +104,6 @@ def taz_df():
     return taz_df
 
 
-# TODO: change network to use df instead of dict
 @inject.injectable(cache=True)
 def taz_nodes():
 
@@ -93,20 +140,33 @@ def base_network(skims_settings, network_settings):
 
 @inject.injectable(cache=True)
 def auto_skim(skims_settings, taz_list):
+
     file_name = skims_settings.get('auto_skim_file')
     table_name = skims_settings.get('auto_skim_table')
+    file_path = data_file_path(file_name)
+
+    return read_skim_file(file_path, table_name)
+
+
+def read_skim_file(file_path, table_name):
+
+    taz_list = inject.get_injectable('taz_list')
+    skims_settings = inject.get_injectable('skims_settings')
     ataz_col = skims_settings.get('skim_ataz_col')
     ptaz_col = skims_settings.get('skim_ptaz_col')
 
+    file_name = os.path.basename(file_path)
+    dir_name = os.path.basename(os.path.dirname(file_path))
+
     # 3 dimensional matrix with time and distance
-    print(f'reading auto_skim from {file_name}...')
-    if file_name.endswith('.csv'):
-        skim = Skim.from_csv(data_file_path(file_name),
+    print(f'reading {file_name} from {dir_name}...')
+    if file_path.endswith('.csv'):
+        skim = Skim.from_csv(file_path,
                              ataz_col, ptaz_col,
                              mapping=taz_list)
 
-    elif file_name.endswith('.db'):
-        skim = Skim.from_sqlite(data_file_path(file_name), table_name,
+    elif file_path.endswith('.db'):
+        skim = Skim.from_sqlite(file_path, table_name,
                                 ataz_col, ptaz_col,
                                 mapping=taz_list)
 
@@ -119,12 +179,12 @@ def auto_skim(skims_settings, taz_list):
 def load_skim(mode, base=False):
 
     skims_settings = inject.get_injectable('skims_settings')
-    skim_file = skims_settings.get(mode + '_skim_file')
+    skim_file = skims_settings.get(f'{mode}_skim_file')
     file_path = os.path.join(inject.get_injectable('data_dir'), skim_file)
 
     if not base:
 
-        skim = inject.get_injectable(mode + '_skim', default=None)
+        skim = inject.get_injectable(f'{mode}_skim', default=None)
 
         if skim:
 
@@ -132,14 +192,13 @@ def load_skim(mode, base=False):
 
         file_path = output_file_path(skim_file)
 
-    taz_list = inject.get_injectable('taz_list')
+    skim_table = skims_settings.get(f'{mode}_skim_table')
     ataz_col = skims_settings.get('skim_ataz_col')
     ptaz_col = skims_settings.get('skim_ptaz_col')
 
     if os.path.exists(file_path):
-        print(f'loading {mode} skim from {os.path.basename(os.path.dirname(file_path))}')
 
-        skim = Skim.from_csv(file_path, ataz_col, ptaz_col, mapping=taz_list)
+        skim = read_skim_file(file_path, skim_table)
 
     else:
         print(f'skimming {mode} skim from network...')
@@ -162,7 +221,7 @@ def load_skim(mode, base=False):
             print(f'saving {mode} skim to {os.path.basename(os.path.dirname(file_path))}...')
             skim.to_csv(file_path)
 
-    inject.add_injectable(mode + '_skim', skim)
+    inject.add_injectable(f'{mode}_skim', skim)
 
     return skim.to_numpy()
 
