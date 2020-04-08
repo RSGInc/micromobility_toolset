@@ -18,9 +18,6 @@ def incremental_demand():
 
     bike_skim = load_skim('bike')
 
-    # fix build walk skims to zero, not needed for incremental model
-    walk_skim = np.zeros((nzones, nzones))
-
     # don't report zero divide in np arrayes
     np.seterr(divide='ignore', invalid='ignore')
 
@@ -32,13 +29,11 @@ def incremental_demand():
         # use trips from previous step, if present
         base_trips = load_taz_matrix(segment)
 
-        # calculate base walk and bike utilities
+        # calculate base bike utilities
         base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
-        base_walk_util = walk_skim * trips_settings.get('walk_skim_coef')
 
         # create initial build utilities
         build_bike_util = base_bike_util.copy()
-        build_walk_util = base_walk_util.copy()
 
         # if not nhb, average PA and AP bike utilities
         if segment != 'nhb':
@@ -46,7 +41,6 @@ def incremental_demand():
             build_bike_util = 0.5 * (build_bike_util + np.transpose(build_bike_util))
 
         # create 0-1 availability matrices when skim > 0
-        walk_avail = (walk_skim > 0) + np.diag(np.ones(nzones))
         if segment != 'nhb':
             bike_avail = (bike_skim > 0) * np.transpose(bike_skim > 0) + np.diag(np.ones(nzones))
         else:
@@ -54,9 +48,7 @@ def incremental_demand():
 
         # non-available gets extreme negative utility
         base_bike_util = bike_avail * base_bike_util - 999 * (1 - bike_avail)
-        base_walk_util = walk_avail * base_walk_util - 999 * (1 - walk_avail)
         build_bike_util = bike_avail * build_bike_util - 999 * (1 - bike_avail)
-        build_walk_util = walk_avail * build_walk_util - 999 * (1 - walk_avail)
 
         # split full trip matrix and sum up into motorized, nonmotorized, walk, bike, and total
         midxs = get_injectable('motorized_mode_indices')
@@ -79,16 +71,12 @@ def incremental_demand():
               int(np.sum(bike_trips)))
 
         # calculate logit denominator
-        denom = motorized_trips + walk_trips * \
-                np.exp(build_walk_util - base_walk_util) + \
-                bike_trips * np.exp(build_bike_util - base_bike_util)
+        denom = motorized_trips + bike_trips * np.exp(build_bike_util - base_bike_util)
 
         # perform incremental logit
-        build_motor_trips = total_trips * \
-            np.nan_to_num(motorized_trips / denom)
+        build_motor_trips = total_trips * np.nan_to_num(motorized_trips / denom)
 
-        build_walk_trips = total_trips * \
-            np.nan_to_num(walk_trips * np.exp(build_walk_util - base_walk_util) / denom)
+        build_walk_trips = total_trips * np.nan_to_num(walk_trips / denom)
 
         build_bike_trips = total_trips * \
             np.nan_to_num(bike_trips * np.exp(build_bike_util - base_bike_util) / denom)
