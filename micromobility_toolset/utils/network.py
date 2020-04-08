@@ -550,7 +550,7 @@ class Network():
             vardual = False
             var_index = self.adjacency_names.index(varname)
 
-        if wgtvar != None:
+        if wgtvar is not None:
 
             if wgtvar in self.dual_names:
                 wgtdual = True

@@ -31,8 +31,7 @@ def assign_demand():
         print('')
         print(('segment ' + segment))
         print('non-intrazonal bike trips')
-        print(int(np.sum(bike_trips * (np.ones((nzones, nzones)) -
-                                       np.diag(np.ones(nzones))))))
+        print(int(np.sum(bike_trips * (np.ones((nzones, nzones)) - np.diag(np.ones(nzones))))))
 
         total_demand = total_demand + bike_trips
 

@@ -79,9 +79,9 @@ def incremental_demand():
               int(np.sum(bike_trips)))
 
         # calculate logit denominator
-        denom = (motorized_trips + walk_trips *
-                 np.exp(build_walk_util - base_walk_util) +
-                 bike_trips * np.exp(build_bike_util - base_bike_util))
+        denom = motorized_trips + walk_trips * \
+                np.exp(build_walk_util - base_walk_util) + \
+                bike_trips * np.exp(build_bike_util - base_bike_util)
 
         # perform incremental logit
         build_motor_trips = total_trips * \

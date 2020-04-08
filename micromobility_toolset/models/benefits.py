@@ -46,12 +46,13 @@ def benefits():
         build_bike_trips = np.sum(np.take(build_trips, bidxs, axis=2), 2)
 
         # calculate logsums
-        base_logsum = np.log(1.0 +
-                             np.nan_to_num(base_bike_trips /
-                                           (np.sum(base_trips, 2) - base_bike_trips)))
-        build_logsum = np.log(1.0 +
-                              np.nan_to_num(build_bike_trips /
-                                            (np.sum(build_trips, 2) - build_bike_trips)))
+        base_logsum = \
+            np.log(1.0 + np.nan_to_num(
+                base_bike_trips / (np.sum(base_trips, 2) - base_bike_trips)))
+
+        build_logsum = \
+            np.log(1.0 + np.nan_to_num(
+                build_bike_trips / (np.sum(build_trips, 2) - build_bike_trips)))
 
         # calculate user benefits
         user_ben = user_ben - np.sum(base_trips, 2) * \

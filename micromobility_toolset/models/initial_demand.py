@@ -32,8 +32,7 @@ def initial_demand():
         base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
         base_walk_util = walk_skim * trips_settings.get('walk_skim_coef')
 
-        base_motor_util = base_motor_util * (np.ones((nzones, nzones)) -
-                                             np.diag(np.ones(nzones)))
+        base_motor_util = base_motor_util * (np.ones((nzones, nzones)) - np.diag(np.ones(nzones)))
 
         base_bike_util = base_bike_util + trips_settings.get('bike_asc')[segment]
         base_walk_util = base_walk_util + trips_settings.get('walk_asc')[segment]
