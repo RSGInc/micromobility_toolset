@@ -8,8 +8,8 @@ from ..utils.io import load_skim
 @step()
 def skim_network():
 
-    bike_skim = load_skim('bike')
-    walk_skim = load_skim('walk')
+    bike_skim = load_skim('bike', base=True)
+    walk_skim = load_skim('walk', base=True)
 
     print('')
     print('bike skim stats')

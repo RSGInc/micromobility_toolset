@@ -1,3 +1,9 @@
+"""
+Create initial trip tables
+
+Results will be placed in the build directory
+"""
+
 import numpy as np
 
 from activitysim.core.inject import step, get_injectable

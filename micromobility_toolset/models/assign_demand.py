@@ -40,7 +40,7 @@ def assign_demand():
     print(np.sum(total_demand))
 
     print('')
-    print('assigning trips...')
+    print('assigning trips to network...')
 
     base_net = get_injectable('base_network')
     taz_nodes = get_injectable('taz_nodes')

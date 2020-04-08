@@ -16,7 +16,8 @@ def incremental_demand():
     # store number of zones
     nzones = get_injectable('num_zones')
 
-    bike_skim = load_skim('bike')
+    base_bike_skim = load_skim('bike', base=True)
+    build_bike_skim = load_skim('bike')
 
     # don't report zero divide in np arrayes
     np.seterr(divide='ignore', invalid='ignore')
@@ -29,11 +30,9 @@ def incremental_demand():
         # use trips from previous step, if present
         base_trips = load_taz_matrix(segment)
 
-        # calculate base bike utilities
-        base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
-
-        # create initial build utilities
-        build_bike_util = base_bike_util.copy()
+        # calculate bike utilities
+        base_bike_util = base_bike_skim * trips_settings.get('bike_skim_coef')
+        build_bike_util = build_bike_skim * trips_settings.get('bike_skim_coef')
 
         # if not nhb, average PA and AP bike utilities
         if segment != 'nhb':
@@ -42,9 +41,9 @@ def incremental_demand():
 
         # create 0-1 availability matrices when skim > 0
         if segment != 'nhb':
-            bike_avail = (bike_skim > 0) * np.transpose(bike_skim > 0) + np.diag(np.ones(nzones))
+            bike_avail = (base_bike_skim > 0) * np.transpose(base_bike_skim > 0) + np.diag(np.ones(nzones))
         else:
-            bike_avail = (bike_skim > 0) + np.diag(np.ones(nzones))
+            bike_avail = (base_bike_skim > 0) + np.diag(np.ones(nzones))
 
         # non-available gets extreme negative utility
         base_bike_util = bike_avail * base_bike_util - 999 * (1 - bike_avail)

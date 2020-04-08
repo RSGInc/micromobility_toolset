@@ -116,51 +116,55 @@ def auto_skim(skims_settings, taz_list):
     return skim
 
 
-def load_skim(mode):
+def load_skim(mode, base=False):
 
-    skim = inject.get_injectable(mode + '_skim', default=None)
-
-    if skim:
-
-        return skim.to_numpy()
-
-    taz_list = inject.get_injectable('taz_list')
     skims_settings = inject.get_injectable('skims_settings')
     skim_file = skims_settings.get(mode + '_skim_file')
+    file_path = os.path.join(inject.get_injectable('data_dir'), skim_file)
+
+    if not base:
+
+        skim = inject.get_injectable(mode + '_skim', default=None)
+
+        if skim:
+
+            return skim.to_numpy()
+
+        file_path = output_file_path(skim_file)
+
+    taz_list = inject.get_injectable('taz_list')
     ataz_col = skims_settings.get('skim_ataz_col')
     ptaz_col = skims_settings.get('skim_ptaz_col')
-    file_path = output_file_path(skim_file)
 
     if os.path.exists(file_path):
-
-        print(f"loading {mode} skim from {inject.get_injectable('output_dir')}")
-        taz_l = inject.get_injectable('taz_list')
+        print(f'loading {mode} skim from {os.path.basename(os.path.dirname(file_path))}')
 
         skim = Skim.from_csv(file_path, ataz_col, ptaz_col, mapping=taz_list)
-        return skim.to_numpy()
 
-    net = inject.get_injectable('base_network')
-    taz_nodes = inject.get_injectable('taz_nodes')
+    else:
+        print(f'skimming {mode} skim from network...')
 
-    print(f'skimming {mode} skim from network...')
-    matrix = net.get_skim_matrix(taz_nodes,
-                                 skims_settings.get(f'route_varcoef_{mode}'),
-                                 max_cost=skims_settings.get(f'max_cost_{mode}'))
+        net = inject.get_injectable('base_network')
+        taz_nodes = inject.get_injectable('taz_nodes')
 
-    skim = Skim(matrix,
-                mapping=taz_list,
-                orig_col=ataz_col,
-                dest_col=ptaz_col,
-                col_names=[skims_settings.get('skim_distance_col', 'distance')])
+        matrix = net.get_skim_matrix(taz_nodes,
+                                     skims_settings.get(f'route_varcoef_{mode}'),
+                                     max_cost=skims_settings.get(f'max_cost_{mode}'))
+
+        skim = Skim(matrix,
+                    mapping=taz_list,
+                    orig_col=ataz_col,
+                    dest_col=ptaz_col,
+                    col_names=[skims_settings.get('skim_distance_col', 'distance')])
+
+        if skims_settings.get(f'save_{mode}_skim', False):
+
+            print(f'saving {mode} skim to {os.path.basename(os.path.dirname(file_path))}...')
+            skim.to_csv(file_path)
 
     inject.add_injectable(mode + '_skim', skim)
 
-    if skims_settings.get(f'save_{mode}_skim', False):
-
-        print(f'saving {mode} skim to disk...')
-        skim.to_csv(file_path)
-
-    return matrix
+    return skim.to_numpy()
 
 
 @inject.injectable()
