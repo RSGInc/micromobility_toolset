@@ -36,16 +36,16 @@ def assign_demand():
         total_demand = total_demand + bike_trips
 
     print('')
+    print('trip sum')
+    print(np.sum(total_demand))
+
+    print('')
     print('assigning trips...')
 
     base_net = get_injectable('base_network')
     taz_nodes = get_injectable('taz_nodes')
     coef_bike = skims_settings.get('route_varcoef_bike')
     max_cost_bike = skims_settings.get('max_cost_bike')
-
-    print('')
-    print('trip sum')
-    print(np.sum(total_demand))
 
     base_net.load_attribute_matrix(trips=total_demand,
                                    load_name='bike_vol',

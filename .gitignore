@@ -7,3 +7,7 @@ __pycache__/
 
 # notebook
 .ipynb_checkpoints/
+*.ipynb
+
+# package data
+*.egg-info/

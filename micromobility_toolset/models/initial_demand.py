@@ -26,7 +26,7 @@ def initial_demand():
     for segment in trips_settings.get('segments'):
 
         # read in trip tables
-        base_trips = load_taz_matrix(segment)
+        base_trips = load_taz_matrix(segment, base=True)
         base_motor_util = load_util_table(segment)
 
         base_bike_util = bike_skim * trips_settings.get('bike_skim_coef')
@@ -55,7 +55,7 @@ def initial_demand():
         total_trips = motorized_trips + bike_trips + walk_trips
 
         print('')
-        print('segment ' + segment)
+        print(f'segment {segment}')
         print('initial trips')
         print('total motorized walk bike')
         print(int(np.sum(total_trips)),

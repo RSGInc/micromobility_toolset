@@ -85,7 +85,7 @@ def benefits():
     for idx, pollutant in enumerate(pollutants_dict.items()):
         delta_pollutants[:, :, idx] = delta_miles * pollutant[1]['grams_per_mile'] + \
             delta_minutes * pollutant[1]['grams_per_minute']
-        print('Change in g. ' + pollutant[0] + ': ', int(np.sum(delta_pollutants[:, :, idx])))
+        print(f'Change in g. {pollutant[0]}: {np.sum(delta_pollutants[:, :, idx])}')
 
     print('')
     print('writing results...')

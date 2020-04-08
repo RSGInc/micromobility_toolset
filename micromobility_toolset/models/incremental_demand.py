@@ -70,7 +70,7 @@ def incremental_demand():
 
         # log base trips to console
         print('')
-        print(('segment ' + segment))
+        print(f'segment {segment}')
         print('base trips')
         print('total motorized walk bike')
         print(int(np.sum(total_trips)),

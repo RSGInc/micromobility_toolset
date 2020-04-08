@@ -44,7 +44,7 @@ walk_modes:
 bike_modes:
     - bk
 
-input_sqlite_db: example.db
+# input_sqlite_db: example.db
 
 # if using sqlite for input trip tables
 trip_tables:

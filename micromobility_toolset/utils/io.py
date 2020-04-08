@@ -144,8 +144,8 @@ def load_skim(mode):
 
     print(f'skimming {mode} skim from network...')
     matrix = net.get_skim_matrix(taz_nodes,
-                                 skims_settings.get('route_varcoef_' + mode),
-                                 max_cost=skims_settings.get('max_cost_' + mode))
+                                 skims_settings.get(f'route_varcoef_{mode}'),
+                                 max_cost=skims_settings.get(f'max_cost_{mode}'))
 
     skim = Skim(matrix,
                 mapping=taz_list,

@@ -1,5 +1,5 @@
-# link_file: link.csv
-link_file: example.db
+link_file: link.csv
+# link_file: example.db
 link_table_name: link # if using sqlite for link table
 from_name: from_node
 to_name: to_node
@@ -30,8 +30,8 @@ link_attributes_by_direction:
         - wait
         - wait
 
-# node_file: node.csv
-node_file: example.db
+node_file: node.csv
+# node_file: example.db
 node_table_name: node  # if using sqlite for node table
 node_name: node_id
 

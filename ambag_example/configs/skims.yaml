@@ -1,5 +1,5 @@
-# auto_skim_file: auto_skim.csv
-auto_skim_file: example.db
+auto_skim_file: auto_skim.csv
+# auto_skim_file: example.db
 
 # output file names
 bike_skim_file: bike_skim.csv

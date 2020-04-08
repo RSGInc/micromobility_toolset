@@ -211,7 +211,7 @@ class Skim():
         db_connection = sqlite3.connect(sqlite_file)
 
         try:
-            matrix_df = pd.read_sql('select * from ' + table_name,
+            matrix_df = pd.read_sql(f'select * from {table_name}',
                                     db_connection,
                                     index_col=[orig_col, dest_col],
                                     columns=col_names)
