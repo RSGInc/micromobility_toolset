@@ -1,8 +1,8 @@
 models:
-  # - initial_demand
+  - initial_demand
   - incremental_demand
   - benefits
-  # - assign_demand
+  - assign_demand
 
 
 taz_file_name: taz.csv

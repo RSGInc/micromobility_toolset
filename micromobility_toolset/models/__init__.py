@@ -34,5 +34,6 @@ def run(names):
         raise KeyError(f'Invalid step list {names}')
 
     for name in names:
+        print(f"\n{name.upper()}")
         step_func = STEPS.get(name)
         step_func()

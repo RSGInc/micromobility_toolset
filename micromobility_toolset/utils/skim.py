@@ -174,7 +174,7 @@ class Skim():
                           index=multi_index,
                           columns=self.col_names)
 
-        return df
+        return df.loc[(df != 0).any(axis=1)]  # don't use all-zero rows
 
     def to_omx(self, filename):
         # need to check to make sure matrix entries are floats
