@@ -205,6 +205,7 @@ def load_skim(mode, base=False):
 
         net = inject.get_injectable('base_network')
         taz_nodes = inject.get_injectable('taz_nodes')
+        taz_list = inject.get_injectable('taz_list')
 
         matrix = net.get_skim_matrix(taz_nodes,
                                      skims_settings.get(f'route_varcoef_{mode}'),

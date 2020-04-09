@@ -99,7 +99,7 @@ class Network():
             db_connection.close()
 
         else:
-            raise TypeError(f"cannot read nodes from filetype {file_name}")
+            raise TypeError(f'cannot read nodes from filetype {file_name}')
 
         ab_df = link_df[[from_name, to_name]].copy()
         ba_df = link_df[[from_name, to_name]].copy()
@@ -112,7 +112,7 @@ class Network():
         # TODO: add a two_way network property
         ba_df.rename(columns={from_name: to_name, to_name: from_name}, inplace=True)
 
-        link_df = pd.concat([ab_df, ba_df]).set_index([from_name, to_name])
+        link_df = pd.concat([ab_df, ba_df], sort=True).set_index([from_name, to_name])
 
         # nested dict of nodes, with first level being origin nodes, second destination
         # e.g. {0: {0: [34, 'TWO LANE']},
