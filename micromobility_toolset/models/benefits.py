@@ -29,8 +29,7 @@ def benefits():
     # ignore np divide by zero errors
     np.seterr(divide='ignore', invalid='ignore')
 
-    print('')
-    print('calculating vmt, emissions, and user benefits...')
+    print("\ncalculating vmt, emissions, and user benefits...")
 
     # loop over market segments
     for segment in trips_settings.get('segments'):
@@ -73,9 +72,7 @@ def benefits():
         delta_miles = delta_miles * (delta_trips[:, :, idx] / denom)
 
 
-
-    print('')
-    print('User benefits (min.): ', int(np.sum(user_ben)))
+    print("\nUser benefits (min.): ", int(np.sum(user_ben)))
     print('Change in bike trips: ', int(np.sum(np.take(delta_trips, bidxs, axis=2))))
     print('Change in VMT: ', int(np.sum(delta_miles)))
 
@@ -85,10 +82,9 @@ def benefits():
     for idx, pollutant in enumerate(pollutants_dict.items()):
         delta_pollutants[:, :, idx] = delta_miles * pollutant[1]['grams_per_mile'] + \
             delta_minutes * pollutant[1]['grams_per_minute']
-        print(f'Change in g. {pollutant[0]}: {np.sum(delta_pollutants[:, :, idx])}')
+        print(f'Change in g. {pollutant[0]}: {int(np.sum(delta_pollutants[:, :, idx]))}')
 
-    print('')
-    print('writing results...')
+    print("\nwriting results...")
 
     save_taz_matrix(user_ben, 'user_ben', col_names=['minutes'])
     save_taz_matrix(delta_trips, 'chg_trips')

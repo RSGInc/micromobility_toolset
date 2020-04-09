@@ -23,12 +23,12 @@ def initial_demand():
 
     nzones = get_injectable('num_zones')
 
-    walk_skim = load_skim('walk')
-    bike_skim = load_skim('bike')
+    walk_skim = load_skim('walk', base=True)
+    bike_skim = load_skim('bike', base=True)
 
     np.seterr(divide='ignore', invalid='ignore')
 
-    print('performing model calculations...')
+    print("\nperforming model calculations...")
     for segment in trips_settings.get('segments'):
 
         # read in trip tables
@@ -60,14 +60,11 @@ def initial_demand():
         walk_trips = np.sum(np.take(base_trips, widxs, axis=2), 2)
         total_trips = motorized_trips + bike_trips + walk_trips
 
-        print('')
-        print(f'segment {segment}')
-        print('initial trips')
-        print('total motorized walk bike')
-        print(int(np.sum(total_trips)),
-              int(np.sum(motorized_trips)),
-              int(np.sum(walk_trips)),
-              int(np.sum(bike_trips)))
+        print(f"\n{segment} initial trips")
+        print(f'motorized: {int(np.sum(motorized_trips))}')
+        print(f'walk: {int(np.sum(walk_trips))}')
+        print(f'bike: {int(np.sum(bike_trips))}')
+        print(f'total: {int(np.sum(total_trips))}')
 
         denom = np.exp(base_motor_util) + np.exp(base_walk_util) + np.exp(base_bike_util)
         build_motor_trips = total_trips * np.nan_to_num(np.exp(base_motor_util) / denom)
@@ -92,12 +89,11 @@ def initial_demand():
 
         save_taz_matrix(build_trips, segment)
 
-        print('final trips')
-        print('total motorized walk bike')
-        print(int(np.sum(build_trips)),
-              int(np.sum(build_motor_trips)),
-              int(np.sum(build_walk_trips)),
-              int(np.sum(build_bike_trips)))
+        print(f"\n{segment} final trips")
+        print(f'motorized: {int(np.sum(build_motor_trips))}')
+        print(f'walk: {int(np.sum(build_walk_trips))}')
+        print(f'bike: {int(np.sum(build_bike_trips))}')
+        print(f'total: {int(np.sum(build_trips))}')
 
 
 if __name__ == '__main__':

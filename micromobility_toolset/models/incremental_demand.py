@@ -59,15 +59,11 @@ def incremental_demand():
         walk_trips = np.sum(np.take(base_trips, widxs, axis=2), 2)
         total_trips = motorized_trips + bike_trips + walk_trips
 
-        # log base trips to console
-        print('')
-        print(f'segment {segment}')
-        print('base trips')
-        print('total motorized walk bike')
-        print(int(np.sum(total_trips)),
-              int(np.sum(motorized_trips)),
-              int(np.sum(walk_trips)),
-              int(np.sum(bike_trips)))
+        print(f"\n{segment} base trips")
+        print(f'motorized: {int(np.sum(motorized_trips))}')
+        print(f'walk: {int(np.sum(walk_trips))}')
+        print(f'bike: {int(np.sum(bike_trips))}')
+        print(f'total: {int(np.sum(total_trips))}')
 
         # calculate logit denominator
         denom = motorized_trips + bike_trips * np.exp(build_bike_util - base_bike_util)
@@ -99,13 +95,11 @@ def incremental_demand():
 
         save_taz_matrix(build_trips, segment)
 
-        # log build trips to console
-        print('build trips')
-        print('total motorized walk bike')
-        print(int(np.sum(build_trips)),
-              int(np.sum(build_motor_trips)),
-              int(np.sum(build_walk_trips)),
-              int(np.sum(build_bike_trips)))
+        print(f"\n{segment} build trips")
+        print(f'motorized: {int(np.sum(build_motor_trips))}')
+        print(f'walk: {int(np.sum(build_walk_trips))}')
+        print(f'bike: {int(np.sum(build_bike_trips))}')
+        print(f'total: {int(np.sum(build_trips))}')
 
 
 if __name__ == '__main__':

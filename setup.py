@@ -7,7 +7,7 @@ setup(
     author='contributing authors',
     author_email='blake.rosenthal@rsginc.com',
     license='BSD-3',
-    url='https://github.com/WFRCAnalytics/Micromobility-Toolset',
+    url='https://github.com/RSGInc/micromobility_toolset',
     classifiers=[
         'Development Status :: 1 - Planning',
         'Programming Language :: Python :: 3 :: Only',

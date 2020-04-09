@@ -19,29 +19,23 @@ def assign_demand():
     bidxs = get_injectable('bike_mode_indices')
     total_demand = np.zeros((nzones, nzones))
 
-    print('getting demand matrices...')
+    print("\nnon-intrazonal bike trips")
     for segment in trips_settings.get('segments'):
 
         base_trips = load_taz_matrix(segment)
-        bike_trips = np.sum(np.take(base_trips, bidxs, axis=2), 2)
+        bike_trips = np.sum(np.take(base_trips, bidxs, axis=2), 2) * \
+                        (np.ones((nzones, nzones)) - np.diag(np.ones(nzones)))
 
         if segment != 'nhb':
             bike_trips = 0.5 * (bike_trips + np.transpose(bike_trips))
 
-        print('')
-        print(('segment ' + segment))
-        print('non-intrazonal bike trips')
-        print(int(np.sum(bike_trips * (np.ones((nzones, nzones)) - np.diag(np.ones(nzones))))))
+        print(f'{segment}: {round(np.sum(bike_trips), 2)}')
 
         total_demand = total_demand + bike_trips
 
-    print('')
-    print('trip sum')
-    print(np.sum(total_demand))
+    print(f"\ntrip sum: {int(np.sum(total_demand))}")
 
-    print('')
-    print('assigning trips to network...')
-
+    print("\nassigning trips to network...")
     base_net = get_injectable('base_network')
     taz_nodes = get_injectable('taz_nodes')
     coef_bike = skims_settings.get('route_varcoef_bike')
@@ -55,12 +49,9 @@ def assign_demand():
 
     bike_vol = base_net.get_attribute_matrix('bike_vol')
 
-    print('')
-    print('network sum')
-    print(np.sum(bike_vol))
+    print(f"\nnetwork sum: {int(np.sum(bike_vol))}")
 
-    print('')
-    print('writing results...')
+    print("\nwriting results...")
     save_node_matrix(bike_vol, 'bike_vol')
 
     print('done.')

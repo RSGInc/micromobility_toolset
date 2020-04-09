@@ -34,7 +34,7 @@ their values during and across model steps:
     (possibly overwriting an existing injectable of the same name)
     to prevent re-reading the data.
 
-In this way, injectables serve as an in-memory 'build' directory. They
+In this way, injectables serve as an in-memory 'build' store. They
 keep track of the latest version of an object.
 
 For objects that have both 'build' and 'base' versions, such as trip
@@ -325,12 +325,17 @@ def save_taz_matrix(matrix, name, col_names=None):
                 col_names=col_names)
 
     trips_settings = inject.get_injectable('trips_settings')
-    table_file = trips_settings.get('trip_files').get(name, name)
+    table_file = trips_settings.get('trip_files').get(name)
 
-    # save the skim for later steps
-    inject.add_injectable(name, skim)
+    if table_file:
+        # save the table for later steps
+        inject.add_injectable(name, skim)
+        outfile = table_file
 
-    skim.to_csv(output_file_path(table_file))
+    else:
+        outfile = name if name.endswith('.csv') else f'{name}.csv'
+
+    skim.to_csv(output_file_path(outfile))
 
 
 def save_node_matrix(matrix, name):

@@ -247,33 +247,3 @@ class Skim():
                    dest_col=dest_col,
                    col_names=col_names,
                    mapping=mapping)
-
-
-if __name__ == '__main__':
-
-    np.random.seed(123)
-    matrix = np.random.randn(4, 4, 2)
-
-    # print(matrix)
-    # skim = Skim(matrix, mapping=[2, 4, 6, 8], col_names=['time', 'dist'])
-    #
-    # # print(skim.to_numpy())
-    # df = skim.to_dataframe()
-    # print(df)
-
-    sqlite_file = 'ambag_example/data/example.db'
-    # sqlite_file = 'new_path_coef.db'
-    # partial_mapping = [649, 652, 658, 660, 661, 663, 690, 691, 710, 714, 736, 741, 759, 1079, 1080, 1081, 1084, 1085, 1088, 1126]
-    # skim = Skim.from_sqlite(sqlite_file, 'auto_skim', 'i', 'j', mapping=partial_mapping)
-
-    skim = Skim.from_csv('ambag_example/data/nhbtrip.csv', 'ataz', 'ptaz')
-    print(type(skim))
-    df = skim.to_dataframe()
-    print(df.head())
-    print(df.shape)
-    print(df.index)
-
-    # new_skim = Skim(df, mapping=[3, 5, 6, 1])
-    # print(new_skim.to_dataframe())
-    # skim = Skim.from_sqlite()
-    # print(skim.to_numpy())

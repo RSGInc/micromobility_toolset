@@ -22,12 +22,10 @@ def skim_network():
     bike_skim = load_skim('bike', base=True)
     walk_skim = load_skim('walk', base=True)
 
-    print('')
-    print('bike skim stats')
+    print("\nbike skim stats")
     print_skim_stats(bike_skim)
 
-    print('')
-    print('walk skim stats')
+    print("\nwalk skim stats")
     print_skim_stats(walk_skim)
 
 
