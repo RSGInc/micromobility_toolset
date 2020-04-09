@@ -1,40 +1,78 @@
-# AMBAG Bike Model
-This repository contains the software and input test data required to run the AMBAG bike demand model.
+# Micromobility Toolset
+This repository contains the software to run incremental demand calculations and benefits
+summaries for micro-mobility modes. Test data from the AMBAG bike demand model is provided.
 
-## How To
+## How to run the example
 1. Clone this repository.
-2. Download test SQLite database and copy it into this main directory of this repository.
-3. Navigate to the `scripts/` directory.
-4. Run the Python script to generate incremental demand:
+2. Run incremental demand:
    ```
-   python ambag_bike_model_python.py --type incremental_demand --base ../new_path_coef.db --build ../new_path_coef.db
+   python ambag_bike_model.py --name incremental_demand
    ```
-5. Run the Python script to quantify benefits of the changes:
+3. Quantify benefits of the changes:
    ```
-   python ambag_bike_model_python.py --type benefits --base ../new_path_coef.db --build ../new_path_coef.db
+   python ambag_bike_model.py --name bike_benefits
    ```
+4. Assign changed demand counts to the network:
+   ```
+   python ambag_bike_model.py --name assign_demand
+   ```
+
+All steps may be run at once by leaving off the ``--name`` flag:
+```
+python ambag_bike_model.py
+```
+
+The Python script can also generate initial (base) demand using recalculated motorized
+utilities.
+```
+python ambag_bike_model.py --name initial_demand
+```
+
+The network skims may also be generated separately from the model steps:
+```
+python ambag_bike_model.py --name skim_network
+```
+Note: skims are generated on-the-fly during the main model steps and the
+``skim_network`` step does not need to be run beforehand.
 
 ### Outputs
 
-Running the model in "incremental demand" mode will generate network level-of-serivce matrices (skims) and incremental demand matrices.  Each table is indexed by origin and destination zone, and describes the costs associated with travel between zones:
-- **auto_skim** - i, j, time, dist
-- **bike_skim** - i, j, value
-- **walk_skim** - i, j, value
+Running the model in "initial demand" mode will generate initial demand matrices using the provided
+motorized utility tables and input network. This step recalculates the motorized trip utilities for
+the input trip matrices to be used in the incremental demand step. Results may be copied to the
+base directory for use in incremental_demand.
 
-Running the model in "benefits" mode will generate the following three tables of outputs:
+Running the model in "incremental demand" mode will generate incremental demand matrices. Each
+table is indexed by origin and destination zone, and
+describes the costs associated with travel between zones:
+
+Running the model in "benefits" mode will quantify the changes in the build directory compared to
+the base directory and generate the following outputs:
 - **chg_emissions** - i, j, CO2
 - **chg_trips** - i, j, da, s2, s3, wt, dt, wk, bk
 - **chg_vmt** - i, j, value
 - **user_ben** - i, j, minutes of user benefits
+Note that benefits will be calculated using pre-"initial demand" trip tables unless the recalculated
+trip tables have been copied to the base directory.
+
+All steps will generate network level-of-service matrices (skims) indexed by origin and destination
+zone.
+- **bike_skim** - i, j, dist
+- **walk_skim** - i, j, dist
 
 ## Input test data
-The test database is available [here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf) and contains the following tables:
+Input data may be in either CSV or SQLite format. The full test database (SQLite) is available
+[here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf).
 
-### project
-- **project_info** - key, value (name, creator, time, source project, etc.)
+The 25-zone example data (CSV) can be found in ``ambag_example/base/``. Both datasets contain the
+following inputs:
+
+### auto skim
+Time and distance between zones for calculating change in benefits step.
+- **auto_skim** - i, j, time, dist
 
 ### network
-The network is defined by the following tables:
+The network is defined by the following tables (SQLite) or files (CSV):
 - **link**:
    - link_type: TWO LANE, MULTILANE, RAMP, FREEWAY, BIKE, PATH, CENTROID C, SHUTTLE
    - length: link length
@@ -53,49 +91,13 @@ The network is defined by the following tables:
    - x_coord: x coordinate
    - y_coord: y coordinate
    - z_coord: z coordinate
-- **linkpoint**
-   - id: link id for link shaping
-   - pointno: shape point number
-   - x_coord: x coordinate
-   - y_coord: y coordinate
-   - z_coord: z coordinate
-   
+
 ### zones
 The zones are defined by the following tables:
 - **taz**
    - taz: zone number
-   - area: area
-   - co: county
    - node_id: network node id
-   - households: number of households
-   - inc_1: households by income class
-   - inc_2: households by income class
-   - inc_3: households by income class
-   - inc_4: households by income class
-   - age24under: households by age class
-   - age25to44: households by age class
-   - age45to64: households by age class
-   - age65plus: households by age class
-   - auto_0: households by auto class
-   - auto_1: households by auto class
-   - auto_2: households by auto class
-   - auto_3: households by auto class
-   - farm: farm employment 
-   - indu: industrial employment
-   - cons: construction employment
-   - retl: retail employment
-   - serv: service employment
-   - govt: government employment
-   - emp: total employment
-   - k12_enroll: K-12 enrollment
-   - unv_enroll: university enrollment
-- **tazpoly**
-   - taz: zone number
-   - polyno: zone polygon id
-   - pointno: zone point id
-   - xcoord: zone point x coordinate
-   - ycoord: zone point y coordinate
-   
+
 ### demand
 Each table indexed by an origin and destination column, and contains initial zone-to-zone demand by mode. Modes are encoded as drive alone (da), shared ride 2 (s2), shared ride 3+ (sr3), walk transit (wt), drive transit (dt), walk (wk), bike (bk).
 - **hbw1trip** - home-based-work 1 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
@@ -115,3 +117,13 @@ Each table indexed by an origin and destination column, and contains initial zon
 - **nwk2trip** - non-work 2 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
 - **nwk3trip** - non-work 3 rips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
 - **nwk4trip** - non-work 4 trips, ptaz, ataz, da, s2, s3, wt, dt, wk, bk
+
+Each demand table also has a corresponding motorized utility table to be used in the
+"initial demand" step.
+
+### configs
+Additional configuration files in the ``configs`` directory
+- **settings.yaml** - lists the models and provides taz input configuration
+- **network.yaml** - configures network inputs and attributes
+- **trips.yaml** - configures demand inputs, mode, and segment coefficients
+- **skims.yaml** - configures skim inputs/outputs and network skimming coefficients
