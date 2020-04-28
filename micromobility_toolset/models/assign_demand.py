@@ -52,7 +52,7 @@ def assign_demand():
     print(f"\nnetwork sum: {int(np.sum(bike_vol))}")
 
     print("\nwriting results...")
-    save_node_matrix(bike_vol, 'bike_vol')
+    save_node_matrix(bike_vol, 'bike_vol.csv')
 
     print('done.')
 
