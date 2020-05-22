@@ -1,38 +1,37 @@
 import numpy as np
 
-from activitysim.core.inject import step, get_injectable
-
-from ..utils.io import (
-    load_skim,
-    load_taz_matrix,
-    save_taz_matrix)
+from ..model import step
 
 
 @step()
-def incremental_demand():
-    # initialize configuration data
-    trips_settings = get_injectable('trips_settings')
+def incremental_demand(base_scenario, build_scenario):
+    """
+    This step uses trip tables found in the base directory to generate
+    analogous tables for the build directory. It uses the networks from the
+    base and build directories to compare utilities.
+    """
 
-    # store number of zones
-    nzones = get_injectable('num_zones')
+    nzones = base_scenario.num_zones
+    assert nzones == build_scenario.num_zones
 
-    base_bike_skim = load_skim('bike', base=True)
-    build_bike_skim = load_skim('bike')
+    midxs = base_scenario.motorized_mode_indices
+    widxs = base_scenario.walk_mode_indices
+    bidxs = base_scenario.bike_mode_indices
 
     # don't report zero divide in np arrayes
     np.seterr(divide='ignore', invalid='ignore')
 
-    print("\nperforming model calculations...")
+    print("\nperforming scenario calculations...")
 
     # loop over market segments
-    for segment in trips_settings.get('segments'):
+    for segment in base_scenario.trip_settings.get('segments'):
 
         # use trips from previous step, if present
-        base_trips = load_taz_matrix(segment)
+        base_trips = base_scenario.load_trip_matrix(segment)
 
         # calculate bike utilities
-        base_bike_util = base_bike_skim * trips_settings.get('bike_skim_coef')
-        build_bike_util = build_bike_skim * trips_settings.get('bike_skim_coef')
+        base_bike_util = base_scenario.bike_skim * base_scenario.trip_settings.get('bike_skim_coef')
+        build_bike_util = build_scenario.bike_skim * build_scenario.trip_settings.get('bike_skim_coef')
 
         # if not nhb, average PA and AP bike utilities
         if segment != 'nhb':
@@ -41,19 +40,18 @@ def incremental_demand():
 
         # create 0-1 availability matrices when skim > 0
         if segment != 'nhb':
-            bike_avail = (base_bike_skim > 0) * np.transpose(base_bike_skim > 0) + np.diag(np.ones(nzones))
+            bike_avail = \
+                (base_scenario.bike_skim > 0) * \
+                np.transpose(base_scenario.bike_skim > 0) + \
+                np.diag(np.ones(nzones))
         else:
-            bike_avail = (base_bike_skim > 0) + np.diag(np.ones(nzones))
+            bike_avail = (base_scenario.bike_skim > 0) + np.diag(np.ones(nzones))
 
         # non-available gets extreme negative utility
         base_bike_util = bike_avail * base_bike_util - 999 * (1 - bike_avail)
         build_bike_util = bike_avail * build_bike_util - 999 * (1 - bike_avail)
 
         # split full trip matrix and sum up into motorized, nonmotorized, walk, bike, and total
-        midxs = get_injectable('motorized_mode_indices')
-        widxs = get_injectable('walk_mode_indices')
-        bidxs = get_injectable('bike_mode_indices')
-
         motorized_trips = np.sum(np.take(base_trips, midxs, axis=2), 2)
         bike_trips = np.sum(np.take(base_trips, bidxs, axis=2), 2)
         walk_trips = np.sum(np.take(base_trips, widxs, axis=2), 2)
@@ -93,14 +91,10 @@ def incremental_demand():
                 base_trips[:, :, walk_idx] * \
                 np.nan_to_num(build_walk_trips / walk_trips)
 
-        save_taz_matrix(build_trips, segment)
+        build_scenario.save_trip_matrix(build_trips, segment)
 
         print(f"\n{segment} build trips")
         print(f'motorized: {int(np.sum(build_motor_trips))}')
         print(f'walk: {int(np.sum(build_walk_trips))}')
         print(f'bike: {int(np.sum(build_bike_trips))}')
         print(f'total: {int(np.sum(build_trips))}')
-
-
-if __name__ == '__main__':
-    incremental_demand()

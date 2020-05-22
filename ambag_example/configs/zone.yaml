@@ -1,0 +1,5 @@
+zone_file_name: taz.csv
+# zone_file_name: example.db
+zone_table_name: taz  # if using sqlite for zone table
+zone_zone_column: taz
+zone_node_column: node_id

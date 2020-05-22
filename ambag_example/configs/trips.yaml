@@ -18,8 +18,8 @@ segments:
     - nhb
 
 # from and to columns for trip tables
-trip_ataz_col: ataz
-trip_ptaz_col: ptaz
+trip_azone_col: ataz
+trip_pzone_col: ptaz
 
 # modes in order of columns in trip tables
 modes:

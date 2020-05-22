@@ -1,29 +1,20 @@
 import numpy as np
 
-from activitysim.core.inject import step, get_injectable
-
-from ..utils.io import (
-    load_skim,
-    load_taz_matrix,
-    save_taz_matrix)
+from ..model import step
 
 
 @step()
-def benefits():
-    # initialize configuration data
-    trips_settings = get_injectable('trips_settings')
-
-    # get number of zones to dimension matrices
-    nzones = get_injectable('num_zones')
-
-    # read auto times and distances
-    auto_skim = load_skim('auto')
-
-    # get matrix indices for bike modes
-    bidxs = get_injectable('bike_mode_indices')
+def benefits(base_scenario, build_scenario):
+    """
+    This step compares walk, bike, and auto trips between the base and
+    build scenarios and calculates differences in user benefits, emissions,
+    trip count, and trip distance
+    """
+    nzones = base_scenario.num_zones
+    assert nzones == build_scenario.num_zones
 
     # initialize empty matrices
-    delta_trips = np.zeros((nzones, nzones, len(trips_settings.get('modes'))))
+    delta_trips = np.zeros((nzones, nzones, len(build_scenario.trip_settings.get('modes'))))
     user_ben = np.zeros((nzones, nzones))
 
     # ignore np divide by zero errors
@@ -32,17 +23,17 @@ def benefits():
     print("\ncalculating vmt, emissions, and user benefits...")
 
     # loop over market segments
-    for segment in trips_settings.get('segments'):
+    for segment in build_scenario.trip_settings.get('segments'):
 
         # read in trip tables
-        base_trips = load_taz_matrix(segment, base=True)
-        build_trips = load_taz_matrix(segment, base=False)
+        base_trips = base_scenario.load_trip_matrix(segment)
+        build_trips = build_scenario.load_trip_matrix(segment)
 
         # calculate difference in trips
         delta_trips = delta_trips + build_trips - base_trips
 
-        base_bike_trips = np.sum(np.take(base_trips, bidxs, axis=2), 2)
-        build_bike_trips = np.sum(np.take(build_trips, bidxs, axis=2), 2)
+        base_bike_trips = np.sum(np.take(base_trips, base_scenario.bike_mode_indices, axis=2), 2)
+        build_bike_trips = np.sum(np.take(build_trips, build_scenario.bike_mode_indices, axis=2), 2)
 
         # calculate logsums
         base_logsum = \
@@ -55,17 +46,17 @@ def benefits():
 
         # calculate user benefits
         user_ben = user_ben - np.sum(base_trips, 2) * \
-            (build_logsum - base_logsum) / trips_settings.get('ivt_coef')[segment]
+            (build_logsum - base_logsum) / build_scenario.trip_settings.get('ivt_coef')[segment]
 
     # calculate difference in vmt and vehicle minutes of travel
     #######################################
     # FIX: don't use hardcoded skim indexes
     #######################################
-    occupancy_dict = trips_settings.get('occupancy')
-    all_modes = trips_settings.get('modes')
+    occupancy_dict = base_scenario.trip_settings.get('occupancy')
+    all_modes = base_scenario.trip_settings.get('modes')
 
-    delta_minutes = auto_skim[:, :, 0]
-    delta_miles = auto_skim[:, :, 1]
+    delta_minutes = base_scenario.auto_skim[:, :, 0]
+    delta_miles = base_scenario.auto_skim[:, :, 1]
     for mode, denom in occupancy_dict.items():
         idx = all_modes.index(mode)
         delta_minutes = delta_minutes * (delta_trips[:, :, idx] / denom)
@@ -73,11 +64,11 @@ def benefits():
 
 
     print("\nUser benefits (min.): ", int(np.sum(user_ben)))
-    print('Change in bike trips: ', int(np.sum(np.take(delta_trips, bidxs, axis=2))))
+    print('Change in bike trips: ', int(np.sum(np.take(delta_trips, build_scenario.bike_mode_indices, axis=2))))
     print('Change in VMT: ', int(np.sum(delta_miles)))
 
     # calculate difference in pollutants
-    pollutants_dict = trips_settings.get('pollutants')
+    pollutants_dict = build_scenario.trip_settings.get('pollutants')
     delta_pollutants = np.zeros((nzones, nzones, len(pollutants_dict.keys())))
     for idx, pollutant in enumerate(pollutants_dict.items()):
         delta_pollutants[:, :, idx] = delta_miles * pollutant[1]['grams_per_mile'] + \
@@ -86,12 +77,24 @@ def benefits():
 
     print("\nwriting results...")
 
-    save_taz_matrix(user_ben, 'user_ben', col_names=['minutes'])
-    save_taz_matrix(delta_trips, 'chg_trips')
-    save_taz_matrix(delta_miles, 'chg_vmt', col_names=['value'])
-    save_taz_matrix(delta_pollutants, 'chg_emissions', col_names=list(pollutants_dict.keys()))
+    build_scenario.write_zone_matrix(
+        user_ben,
+        'user_ben.csv',
+        col_names=['minutes'])
+
+    build_scenario.write_zone_matrix(
+        delta_trips,
+        'chg_trips.csv',
+        col_names=build_scenario.trip_settings.get('modes'))
+
+    build_scenario.write_zone_matrix(
+        delta_miles,
+        'chg_vmt.csv',
+        col_names=['value'])
+
+    build_scenario.write_zone_matrix(
+        delta_pollutants,
+        'chg_emissions.csv',
+        col_names=list(pollutants_dict.keys()))
 
     print('done.')
-
-if __name__ == '__main__':
-    benefits()

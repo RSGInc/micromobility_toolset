@@ -15,8 +15,8 @@ setup(
     packages=find_packages(),
     python_requires='>=3.6',
     install_requires=[
-        'activitysim >= 0.9.2',
         'numpy >= 1.16.1',
         'pandas >= 1.0.1',
+        'pyyaml >= 5.3.1',
     ]
 )
