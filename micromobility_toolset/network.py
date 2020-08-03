@@ -143,7 +143,7 @@ class Network():
         # TODO: add a two_way network property
         ba_df.rename(columns={from_name: to_name, to_name: from_name}, inplace=True)
 
-        return pd.concat([ab_df, ba_df], sort=True).set_index([from_name, to_name])
+        return pd.concat([ab_df, ba_df], sort=True).set_index([from_name, to_name]).sort_index()
 
     def create_adjacency_dict(self):
         # nested dict of nodes, with first level being origin nodes, second destination
@@ -569,23 +569,6 @@ class Network():
         # Don't include intrazonal values
         return skim_matrix * (np.ones((num_nodes, num_nodes)) - np.diag(np.ones(num_nodes)))
 
-    def get_attribute_matrix(self, attribute_name):
-        """
-        Gets matrix of attribute values for every node pair in the network
-        """
-
-        num_nodes = len(self.nodes)
-        node_mapping = list(self.nodes.keys())
-        matrix = np.zeros((num_nodes, num_nodes))
-
-        for anode in self.adjacency:
-            for bnode in self.adjacency[anode]:
-                aidx = node_mapping.index(anode)
-                bidx = node_mapping.index(bnode)
-                matrix[aidx, bidx] = self.get_link_attribute_value((anode, bnode), attribute_name)
-
-        return matrix
-
     def load_attribute_matrix(self, matrix, load_name, centroid_ids, varcoef, max_cost=None):
         """
         Add attribute values to a set of network links (links) given a list of node ids.
@@ -610,3 +593,10 @@ class Network():
                         link = (paths[target][k],paths[target][k+1])
                         prev = self.get_link_attribute_value(link,load_name) or 0
                         self.set_link_attribute_value(link,load_name,prev+matrix[i,j])
+        
+        # save final values to link_df
+        attributes = []
+        for anode, bnode in list(self.link_df.index):
+            attributes.append(self.get_link_attribute_value((anode, bnode), load_name))
+
+        self.link_df[load_name] = attributes

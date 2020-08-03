@@ -504,18 +504,3 @@ class Scenario():
         filepath = self.data_file_path(filename)
         skim.to_csv(filepath)
 
-    def save_node_matrix(self, matrix, filename, col_names):
-
-        node_list = list(self.network.nodes.keys())
-        filepath = self.data_file_path(filename)
-
-        # remove zeroes to handle large matrices
-        nonzero_mask = np.any(matrix != 0, axis=1) | np.any(matrix != 0, axis=0)
-        matrix = matrix[nonzero_mask, :][:, nonzero_mask]
-        node_list = list(np.array(node_list)[nonzero_mask])
-
-        Skim(matrix,
-             mapping=node_list,
-             orig_col=self.network_settings.get('from_name'),
-             dest_col=self.network_settings.get('to_name'),
-             col_names=col_names).to_csv(filepath)

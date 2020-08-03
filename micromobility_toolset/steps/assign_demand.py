@@ -43,14 +43,10 @@ def assign_demand(*scenarios):
             varcoef=scenario.network_settings.get('route_varcoef_bike'),
             max_cost=scenario.network_settings.get('max_cost_bike'))
 
-        bike_vol = np.nan_to_num(scenario.network.get_attribute_matrix('bike_vol'))
-
-        print(f"\nnetwork sum: {int(np.sum(bike_vol))}")
+        bike_vol = scenario.network.link_df['bike_vol']
+        bmt = bike_vol * scenario.network.link_df['distance']
+        print(f"\nbike miles traveled: {int(bmt.sum())}")
 
         print("\nwriting results...")
-        scenario.save_node_matrix(
-            bike_vol, 
-            'bike_vol.csv',
-            col_names=['bike_vol'])
-
+        bike_vol.to_csv(scenario.data_file_path('bike_vol.csv'))
         print('done.')
