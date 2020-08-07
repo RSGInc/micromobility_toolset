@@ -1,8 +1,51 @@
 # Micromobility Toolset
-This repository contains the software to run incremental demand calculations and benefits
-summaries for micro-mobility modes. Test data from the AMBAG bike demand model is provided.
+This repository contains the software to run several trip generation and network assignment calculations for micro-mobility modes. Test data from the AMBAG bike demand model is provided.
+
+## Model Steps
+
+### Generate Demand
+Generate OD trip tables for various market segments/purposes using network skims and landuse data.
+
+### Incremental Demand
+Given a set of base scenario trips, calculate build scenario trips from build network.
+
+### Benefits
+Calculate difference in emissions benefits between two scenarios.
+
+### Assign Demand
+Assign trips to road network links and calculate traffic volume.
+
+## Outputs
+
+The "initial demand" step will generate initial demand matrices using the provided
+motorized utility tables and input network. This step recalculates the motorized trip utilities for
+the input trip matrices to be used in the incremental demand step.
+
+The "incremental demand" step will generate incremental demand matrices for a build scenario.
+
+"Generate demand" can be used to build the demand tables from scratch (see **Demand** below), given network and landuse data. Each
+table is indexed by origin and destination zone, and describes the costs associated with travel between zones. These tables are also used as inputs for subsequent steps.
+
+The "benefits" step will quantify the changes in the build directory compared to
+the base directory and generate the following outputs:
+- **chg_emissions** - from_node, to_node, [emissions columns]
+- **chg_trips** - from_node, to_node, [trips by mode columns]
+- **chg_vmt** - from_node, to_node, vehicle miles traveled
+- **user_ben** - from_node, to_node, minutes of user benefits
+
+All steps will generate network level-of-service matrices (skims) for each configured mode indexed by origin and destination
+zone.
+- **bike_skim** - from_node, to_node, dist
+- **walk_skim** - from_node, to_node, dist
+
+The "assign demand" step will load the demand matrices into the network and write out a daily traffic volume file:
+- **bike_vol** - from_node, to_node, bike_vol
+
 
 ## How to run the AMBAG example
+
+The AMBAG model uses the `incremental_demand`, `benefits`, and `assign_demand` steps to compare a base scenario and a build scenario.
+
 1. Clone this repository.
 2. Run incremental demand:
    ```
@@ -29,42 +72,19 @@ python ambag_bike_model.py --name skim_network
 Note: skims are generated on-the-fly during the main model steps and the
 ``skim_network`` step does not need to be run beforehand.
 
-### Outputs
-
-Running the model in "initial demand" mode will generate initial demand matrices using the provided
-motorized utility tables and input network. This step recalculates the motorized trip utilities for
-the input trip matrices to be used in the incremental demand step. Results may be copied to the
-base directory for use in incremental_demand.
-
-Running the model in "incremental demand" mode will generate incremental demand matrices. Each
-table is indexed by origin and destination zone, and
-describes the costs associated with travel between zones:
-
-Running the model in "benefits" mode will quantify the changes in the build directory compared to
-the base directory and generate the following outputs:
-- **chg_emissions** - i, j, CO2
-- **chg_trips** - i, j, da, s2, s3, wt, dt, wk, bk
-- **chg_vmt** - i, j, value
-- **user_ben** - i, j, minutes of user benefits
-
-All steps will generate network level-of-service matrices (skims) indexed by origin and destination
-zone.
-- **bike_skim** - i, j, dist
-- **walk_skim** - i, j, dist
-
-## Input test data
-Input data may be in either CSV or SQLite format. The full test database (SQLite) is available
+## Input data
+Input data may be in either CSV or SQLite format. The full test database for AMBAG (SQLite) is available
 [here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf).
 
 The 25-zone example data (CSV) can be found in ``ambag_example/base/`` and ``ambag_example/build/``. Both datasets contain the
 following inputs:
 
 ### auto skim
-Time and distance between zones for calculating change in benefits step.
+Time and distance between zones for calculating change in `benefits` step only.
 - **auto_skim** - i, j, time, dist
 
 ### network
-The network is defined by the following tables (SQLite) or files (CSV) for both the base and build
+The network is defined by a link file and a node file for all scenarios. The columns found in the AMBAG example inputs are listed here:
 scenarios:
 - **link**:
    - link_type: TWO LANE, MULTILANE, RAMP, FREEWAY, BIKE, PATH, CENTROID C, SHUTTLE
@@ -86,13 +106,13 @@ scenarios:
    - z_coord: z coordinate
 
 ### zones
-The zones are defined by the following tables:
+The zones are defined by a single zone table. Additional attributes are necessary for the `generate_demand` step.
 - **zone**
    - taz: taz number
    - node_id: network node id
 
 ### demand
-Each table indexed by an origin and destination column, and contains initial zone-to-zone demand by mode. Modes are encoded as drive alone (da), shared ride 2 (s2), shared ride 3+ (sr3), walk transit (wt), drive transit (dt), walk (wk), bike (bk).
+Each table indexed by an origin and destination column, and contains initial zone-to-zone demand by mode. These tables can be generated by the 'generate_demand' step and are used as inputs for 'incremental_demand', 'benefits' and 'assign_demand'. Trip file names can be configured in `trips.yaml` according to the model's segments/purposes. The names and columns for the AMBAG example are given here:
 - **hbw1trip** - home-based-work 1 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
 - **hbw2trip** - home-based-work 2 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
 - **hbw3trip** - home-based-work 3 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
@@ -119,4 +139,3 @@ Additional configuration files in the ``configs`` directory
 - **zone.yaml** - provides zone input configuration
 - **network.yaml** - configures network inputs and attributes
 - **trips.yaml** - configures demand inputs, mode, and segment coefficients
-- **skims.yaml** - configures skim inputs/outputs and network skimming coefficients
