@@ -17,7 +17,7 @@ def generate_demand(*scenarios):
 
     for scenario in scenarios:
 
-        print(f"\nperforming {scenario.name} calculations...")
+        scenario.log(f"performing calculations...")
 
         bike_avail = (scenario.bike_skim > 0) + np.diag(np.ones(scenario.num_zones))
         buffer_dist = scenario.zone_settings.get('buffer_dist')
@@ -76,8 +76,7 @@ def generate_demand(*scenarios):
             # allocate orig trips to destinations
             bike_trips = orig_bike_trips * dc_frac
 
-            print(f"\n{segment} home-based trips")
-            print(f'bike: {int(np.sum(bike_trips))}')
+            scenario.log(f'{segment} home-based trips: {int(np.sum(bike_trips))}')
 
             trips = \
                 np.zeros((
@@ -97,8 +96,7 @@ def generate_demand(*scenarios):
                 nhb_orig_bike_trips = np.sum(bike_trips, axis=1) * nhb_factor
                 nhb_bike_trips = nhb_orig_bike_trips * dc_frac
             
-                print(f"\n{segment} non-home-based trips")
-                print(f'bike: {int(np.sum(nhb_bike_trips))}')
+                scenario.log(f'{segment} non-home-based trips: {int(np.sum(nhb_bike_trips))}')
 
                 nhb_trips = \
                     np.zeros((

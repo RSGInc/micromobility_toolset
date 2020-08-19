@@ -27,8 +27,11 @@ See ambag_bike_model.py for a usage example.
 """
 
 import os
+import time
 import yaml
+import logging
 import sqlite3
+
 import numpy as np
 import pandas as pd
 
@@ -75,9 +78,12 @@ def run(steps, *scenarios):
         raise KeyError(f'Invalid step list {steps}')
 
     for step in steps:
+        start_time = time.perf_counter()
         print(f"\n{step.upper()}")
         step_func = STEPS.get(step)
         step_func(*scenarios)
+        stop_time = time.perf_counter()
+        print(f'{step} completed in {stop_time - start_time:0.4f} seconds')
 
 
 def _read_dataframe(file_path, index_col, table_name=None):
@@ -123,21 +129,21 @@ def filter_impact_area(base_scenario, build_scenario=None, zone_ids=None):
         del build_scenario.zone_nodes
         del build_scenario.zone_list
 
+        build_scenario.log(f'using {len(build_scenario.zone_df.index)} zones')
     
     base_scenario.zone_df = base_scenario.zone_df[base_mask]
     del base_scenario.zone_nodes
     del base_scenario.zone_list
 
-    print(f'using {len(base_scenario.zone_df.index)} {base_scenario.name} zones')
+    base_scenario.log(f'using {len(base_scenario.zone_df.index)} zones')
 
 
 def _get_zone_diff(base_scenario, build_scenario):
     base_zone_df = base_scenario.zone_df
     build_zone_df = build_scenario.zone_df
     
-    print(
-        f'filtering {len(base_zone_df.index)} {base_scenario.name} zones',
-        f'and {len(build_zone_df.index)} {build_scenario.name} zones...')
+    for scenario, df in zip([base_scenario, build_scenario], [base_zone_df, build_zone_df]):
+        scenario.log(f'filtering {len(df.index)} zones...')
     
     changed_nodes = []
 
@@ -146,13 +152,13 @@ def _get_zone_diff(base_scenario, build_scenario):
     link_diff = pd.concat([base_links, build_links]).drop_duplicates(keep=False)
 
     if link_diff.empty:
-        print('base and build links are the same.')
+        base_scenario.log(f'links match {build_scenario.name}')
 
     else:
         from_nodes = list(link_diff[base_scenario.network_settings.get('from_name')])
         to_nodes = list(link_diff[base_scenario.network_settings.get('to_name')])
         link_nodes = list(set(from_nodes + to_nodes))
-        print(f'base and build links differ by {len(link_nodes)} nodes.')
+        base_scenario.log(f'links differ from {build_scenario.name} by {len(link_nodes)} nodes.')
 
         changed_nodes.extend(link_nodes)
 
@@ -162,11 +168,11 @@ def _get_zone_diff(base_scenario, build_scenario):
     node_diff = pd.concat([base_nodes, build_nodes]).drop_duplicates(keep=False)
 
     if node_diff.empty:
-        print('base and build nodes are the same.')
+        base_scenario.log(f'nodes match {build_scenario.name}')
 
     else:
         nodes = list(set(node_diff[base_scenario.network_settings.get('node_name')]))
-        print(f'base and build nodes differ by {len(nodes)} nodes.')
+        base_scenario.log(f'nodes differ from {build_scenario.name} by {len(nodes)} nodes.')
 
         changed_nodes.extend(nodes)
 
@@ -176,18 +182,18 @@ def _get_zone_diff(base_scenario, build_scenario):
         build_scenario.zone_df.round(4).reset_index()]).drop_duplicates(keep=False)
 
     if zone_diff.empty:
-        print('base and build zones are the same')
+        base_scenario.log(f'zones match {build_scenario.name}')
 
     else:
         zone_nodes = list(set(zone_diff[node_col]))
-        print(f'base and build zones differ by {len(zone_nodes)} zones')
+        base_scenario.log(f'zones differ from {build_scenario.name} by {len(zone_nodes)} zones.')
 
         changed_nodes.extend(zone_nodes)
     
     if not changed_nodes:
         return
 
-    print('getting nearby zones from the build network...')
+    build_scenario.log('getting nearby zones from the network...')
     nearby_zones = build_scenario.network.get_nearby_pois(
         build_zone_df[node_col],
         changed_nodes,
@@ -283,6 +289,29 @@ class Scenario():
         return settings
 
     @cache
+    def logger(self):
+        logger = logging.getLogger(self.name)
+        logger.setLevel(logging.INFO)
+
+        # console handler
+        ch = logging.StreamHandler()
+        formatter = logging.Formatter('%(name)s - %(message)s')
+        ch.setFormatter(formatter)
+
+        # file handler
+        fh = logging.FileHandler(f'{self.name}.log')
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+
+        logger.addHandler(ch)
+        logger.addHandler(fh)
+
+        return logger
+
+    def log(self, message):
+        self.logger.info(message)
+        
+    @cache
     def zone_settings(self):
         return self._read_settings_file('zone.yaml')
 
@@ -297,7 +326,7 @@ class Scenario():
     @cache
     def network(self):
 
-        print(f'creating {self.name} network ...')
+        self.log('creating network ...')
         net_settings = self.network_settings.copy()
 
         link_file = self.data_file_path(net_settings.get('link_file'))
@@ -326,7 +355,6 @@ class Scenario():
             zone_col,
             table_name=zone_table)
         
-        # print(f'loaded {zone_df.shape[0]} zones')
         return zone_df
 
 
@@ -354,7 +382,7 @@ class Scenario():
         dir_name = os.path.basename(os.path.dirname(file_path))
 
         # 3 dimensional matrix with time and distance
-        print(f'reading {file_name} from {self.name}...')
+        self.log(f'reading {file_name} ...')
         if file_path.endswith('.csv'):
             skim = Skim.from_csv(
                 file_path,
@@ -386,7 +414,7 @@ class Scenario():
             skim = self._read_skim_file(file_path, skim_table)
 
         else:
-            print(f'skimming {mode} skim from {self.name} network...')
+            self.log(f'skimming {mode} skim from network...')
             matrix = self.network.get_skim_matrix(
                 self.zone_nodes,
                 self.network_settings.get(f'route_varcoef_{mode}'),
@@ -399,7 +427,7 @@ class Scenario():
                     col_names=[self.network_settings.get('skim_distance_col', 'distance')])
 
             if self.network_settings.get(f'save_{mode}_skim', False):
-                print(f'saving {mode} skim to {os.path.basename(os.path.dirname(file_path))}...')
+                self.log(f'saving {mode} skim to {os.path.basename(os.path.dirname(file_path))}...')
                 skim.to_csv(file_path)
 
         return skim.to_numpy()

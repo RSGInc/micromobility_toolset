@@ -15,9 +15,9 @@ def skim_network(*scenarios):
 
     for scenario in scenarios:
 
-        print(f"\ngetting {scenario.name} skims...")
+        scenario.log('getting skims...')
 
-        print(f"\n{scenario.name} bike skim stats")
+        scenario.log('bike skim stats')
         print_skim_stats(scenario.bike_skim)
 
         # print(f"\n{scenario.name} walk skim stats")

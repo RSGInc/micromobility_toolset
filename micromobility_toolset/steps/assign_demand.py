@@ -13,7 +13,7 @@ def assign_demand(*scenarios):
 
     for scenario in scenarios:
 
-        print(f"\nperforming {scenario.name} calculations")
+        scenario.log("performing calculations")
         total_demand = np.zeros((scenario.num_zones, scenario.num_zones))
 
         for segment in scenario.trip_settings.get('segments'):
@@ -28,13 +28,13 @@ def assign_demand(*scenarios):
             if np.ndim(bike_trips) > 2:
                 bike_trips = np.sum(np.take(bike_trips, scenario.bike_mode_indices, axis=2), 2)
 
-            print(f'{segment}: {round(np.sum(bike_trips), 2)}')
+            scenario.log(f'{segment} trips: {round(np.sum(bike_trips), 2)}')
 
             total_demand = total_demand + bike_trips
 
-        print(f"\ntrip sum: {int(np.sum(total_demand))}")
+        scenario.log(f"trip sum: {int(np.sum(total_demand))}")
 
-        print("\nassigning trips to network...")
+        scenario.log("assigning trips to network...")
 
         scenario.network.load_attribute_matrix(
             matrix=total_demand,
@@ -45,8 +45,8 @@ def assign_demand(*scenarios):
 
         bike_vol = scenario.network.link_df['bike_vol']
         bmt = bike_vol * scenario.network.link_df['distance']
-        print(f"\nbike miles traveled: {int(bmt.sum())}")
+        scenario.log(f"bike miles traveled: {int(bmt.sum())}")
 
-        print("\nwriting results...")
+        scenario.log("writing results to bike_vol.csv...")
         bike_vol.to_csv(scenario.data_file_path('bike_vol.csv'))
-        print('done.')
+        scenario.log('done.')
