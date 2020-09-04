@@ -374,8 +374,8 @@ class Scenario():
 
     def _read_skim_file(self, file_path, table_name):
 
-        azone_col = self.network_settings.get('skim_azone_col')
-        pzone_col = self.network_settings.get('skim_pzone_col')
+        ozone_col = self.network_settings.get('skim_pzone_col')
+        dzone_col = self.network_settings.get('skim_azone_col')
         zones = self.zone_list
 
         file_name = os.path.basename(file_path)
@@ -386,13 +386,13 @@ class Scenario():
         if file_path.endswith('.csv'):
             skim = Skim.from_csv(
                 file_path,
-                azone_col, pzone_col,
+                ozone_col, dzone_col,
                 mapping=zones)
 
         elif file_path.endswith('.db'):
             skim = Skim.from_sqlite(
                 file_path, table_name,
-                azone_col, pzone_col,
+                ozone_col, dzone_col,
                 mapping=zones)
 
         else:
@@ -406,8 +406,8 @@ class Scenario():
         file_path = self.data_file_path(skim_file)
 
         skim_table = self.network_settings.get(f'{mode}_skim_table')
-        azone_col = self.network_settings.get('skim_azone_col')
-        pzone_col = self.network_settings.get('skim_pzone_col')
+        ozone_col = self.network_settings.get('skim_pzone_col')
+        dzone_col = self.network_settings.get('skim_azone_col')
 
         if os.path.exists(file_path):
 
@@ -422,8 +422,8 @@ class Scenario():
 
             skim = Skim(matrix,
                     mapping=self.zone_list,
-                    orig_col=azone_col,
-                    dest_col=pzone_col,
+                    orig_col=ozone_col,
+                    dest_col=dzone_col,
                     col_names=[self.network_settings.get('skim_distance_col', 'distance')])
 
             if self.network_settings.get(f'save_{mode}_skim', False):
@@ -475,15 +475,15 @@ class Scenario():
 
     def _read_zone_matrix(self, file_name, table_name=None):
 
-        azone_col = self.trip_settings.get('trip_azone_col')
         pzone_col = self.trip_settings.get('trip_pzone_col')
+        azone_col = self.trip_settings.get('trip_azone_col')
 
         if file_name.endswith('.csv'):
-            skim = Skim.from_csv(file_name, azone_col, pzone_col, mapping=self.zone_list)
+            skim = Skim.from_csv(file_name, pzone_col, azone_col, mapping=self.zone_list)
 
         elif file_name.endswith('.db'):
             skim = Skim.from_sqlite(file_name, table_name,
-                                azone_col, pzone_col,
+                                pzone_col, azone_col,
                                 mapping=self.zone_list)
 
         else:
@@ -525,8 +525,8 @@ class Scenario():
 
         skim = Skim(matrix,
                 mapping=self.zone_list,
-                orig_col=self.trip_settings.get('trip_azone_col'),
-                dest_col=self.trip_settings.get('trip_pzone_col'),
+                orig_col=self.trip_settings.get('trip_pzone_col'),
+                dest_col=self.trip_settings.get('trip_azone_col'),
                 col_names=col_names)
 
         filepath = self.data_file_path(filename)
