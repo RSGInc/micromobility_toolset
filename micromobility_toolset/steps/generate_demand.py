@@ -23,7 +23,11 @@ def generate_demand(*scenarios):
         buffer_dist = scenario.zone_settings.get('buffer_dist')
         bike_buffer = bike_avail * (1 / (1 + np.exp(4 * (scenario.bike_skim - buffer_dist/2))))
 
+        # initialize dataframes
         buffered_zones = pd.DataFrame(index=scenario.zone_list)
+        trip_gen_df = pd.DataFrame(index=scenario.zone_list)
+        dest_size_df = pd.DataFrame(index=scenario.zone_list)
+
         for measure in scenario.zone_settings.get('buffer_cols'):
             zone_col = scenario.zone_df[measure].values
             buffered_zones[measure] = np.sum(zone_col * bike_buffer, axis=0)
@@ -48,7 +52,12 @@ def generate_demand(*scenarios):
                 np.sum(buffer_vals * buffer_coefs, axis=1)
 
             orig_bike_trips[orig_bike_trips < 0] = 0
-            orig_bike_trips = np.log(orig_bike_trips + 1) * scenario.zone_df[zone_hh_col].values
+            
+            # save segment trips to production df
+            trip_gen_df[segment] = orig_bike_trips
+
+            # multiply by households to get total trip counts
+            orig_bike_trips = orig_bike_trips * scenario.zone_df[zone_hh_col].values
 
             dest_cols = scenario.trip_settings.get('dest_choice_coefs')[segment].keys()
             dest_coefs = scenario.trip_settings.get('dest_choice_coefs')[segment].values()
@@ -56,6 +65,10 @@ def generate_demand(*scenarios):
             dest_vals = scenario.zone_df[dest_cols].values
 
             dest_size = np.sum(dest_vals * dest_coefs, axis=1)
+            dest_size[dest_size < 0] = 0
+
+            # save segment values to attraction df
+            dest_size_df[segment] = dest_size
 
             intrazonal = \
                 np.diag(
@@ -67,14 +80,15 @@ def generate_demand(*scenarios):
                 intrazonal + \
                 scenario.trip_settings.get('bike_asc')[segment]
 
-            bike_util = np.log(dest_size) + gen_dist
+            bike_util = np.log(dest_size + 1) + gen_dist
             bike_util = np.exp(bike_util - 999 * (1 - bike_avail))
 
             # destination-choice fraction
-            dc_frac = np.nan_to_num(bike_util / np.sum(bike_util, axis=0))
+            dc_frac = np.nan_to_num(bike_util / np.sum(bike_util, axis=1).reshape(-1,1))
+            # print(np.sum(dc_frac, axis=1))  # should be all ones
 
             # allocate orig trips to destinations
-            bike_trips = orig_bike_trips * dc_frac
+            bike_trips = orig_bike_trips.reshape(-1,1) * dc_frac
 
             scenario.log(f'{segment} home-based trips: {int(np.sum(bike_trips))}')
 
@@ -85,7 +99,7 @@ def generate_demand(*scenarios):
                     len(scenario.trip_settings.get('modes'))))
 
             for bike_idx in scenario.bike_mode_indices:
-                trips[:, :, bike_idx] = bike_trips
+                trips[:, :, bike_idx] = np.nan_to_num(bike_trips)
                     #np.nan_to_num(bike_trips / np.sum(bike_trips, axis=2))
 
             scenario.save_trip_matrix(trips, segment)
@@ -94,7 +108,7 @@ def generate_demand(*scenarios):
             nhb_factor = scenario.trip_settings.get('nhb_factor').get(segment)
             if nhb_factor:
                 nhb_orig_bike_trips = np.sum(bike_trips, axis=1) * nhb_factor
-                nhb_bike_trips = nhb_orig_bike_trips * dc_frac
+                nhb_bike_trips = nhb_orig_bike_trips.reshape(-1,1) * dc_frac
             
                 scenario.log(f'{segment} non-home-based trips: {int(np.sum(nhb_bike_trips))}')
 
@@ -105,7 +119,12 @@ def generate_demand(*scenarios):
                         len(scenario.trip_settings.get('modes'))))
 
                 for bike_idx in scenario.bike_mode_indices:
-                    nhb_trips[:, :, bike_idx] = nhb_bike_trips
+                    nhb_trips[:, :, bike_idx] = np.nan_to_num(nhb_bike_trips)
                         #np.nan_to_num(bike_trips / np.sum(bike_trips, axis=2))
 
                 scenario.save_trip_matrix(nhb_trips, f'{segment}_nhb')
+
+        # finally, save intermediate calculations to disk
+        buffered_zones.round(4).to_csv(scenario.data_file_path('buffered_zones.csv'))
+        trip_gen_df.round(4).to_csv(scenario.data_file_path('zone_production_size.csv'))
+        dest_size_df.round(4).to_csv(scenario.data_file_path('zone_attraction_size.csv'))
