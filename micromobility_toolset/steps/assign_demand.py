@@ -43,7 +43,7 @@ def assign_demand(*scenarios):
             varcoef=scenario.network_settings.get('route_varcoef_bike'),
             max_cost=scenario.network_settings.get('max_cost_bike'))
 
-        bike_vol = scenario.network.link_df['bike_vol']
+        bike_vol = scenario.network.link_df['bike_vol'].fillna(0)
         bmt = bike_vol * scenario.network.link_df['distance']
         scenario.log(f"bike miles traveled: {int(bmt.sum())}")
 
