@@ -3,8 +3,34 @@ This repository contains the software to run several trip generation and network
 
 ## Model Steps
 
+Each model will use a combination of the provided land-use and network data, along with the configuration coefficients, to produce various outputs. Some of these outputs, like the trip tables from `Generate Demand`, will be used for subsequent model steps. Most steps require a zone level OD matrix to perform their calculations -- if this matrix is not provided as an input, it will be skimmed from the network and saved to the data directory. Subsequent steps will reuse this file in favor of recalculating the OD matrix.
+
+Example for a model with bike and walk modes:
+- **bike_skim** - from_node, to_node, dist
+- **walk_skim** - from_node, to_node, dist
+
+### Initial Demand
+Re-calculate input trip tables using the provided motorized utility OD matrix. This step recalculates the motorized trip utilities for
+the input trip matrices to be used in the incremental demand step.
+
+#### Inputs
+- Trip tables for each market segment/purpose
+- Motorized utility for each segment
+
+#### Outputs
+- Re-calculated trip tables
+
 ### Generate Demand
-Generate OD trip tables for various market segments/purposes using network skims and landuse data.
+Generate OD trip tables from scratch for various market segments/purposes using network skims and landuse data.
+
+#### Inputs
+- Landuse and network files (see **Input Data** below)
+
+#### Outputs
+- Trip tables by segment (see **Demand** below)
+- **buffered_zones.csv** - A buffered version of the land use file
+- **zone_production_size.csv** - A zone-indexed file with the number of trips produced per household (for each segment)
+- **zone_attraction_size.csv** - The attraction size measure for each zone (for each segment)
 
 ### Incremental Demand
 Given a set of base scenario trips, calculate build scenario trips from build network.
@@ -12,33 +38,16 @@ Given a set of base scenario trips, calculate build scenario trips from build ne
 ### Benefits
 Calculate difference in emissions benefits between two scenarios.
 
-### Assign Demand
-Assign trips to road network links and calculate traffic volume.
-
-## Outputs
-
-The "initial demand" step will generate initial demand matrices using the provided
-motorized utility tables and input network. This step recalculates the motorized trip utilities for
-the input trip matrices to be used in the incremental demand step.
-
-The "incremental demand" step will generate incremental demand matrices for a build scenario.
-
-"Generate demand" can be used to build the demand tables from scratch (see **Demand** below), given network and landuse data. Each
-table is indexed by origin and destination zone, and describes the costs associated with travel between zones. These tables are also used as inputs for subsequent steps.
-
-The "benefits" step will quantify the changes in the build directory compared to
-the base directory and generate the following outputs:
+#### Outputs
 - **chg_emissions** - from_node, to_node, [emissions columns]
 - **chg_trips** - from_node, to_node, [trips by mode columns]
 - **chg_vmt** - from_node, to_node, vehicle miles traveled
 - **user_ben** - from_node, to_node, minutes of user benefits
 
-All steps will generate network level-of-service matrices (skims) for each configured mode indexed by origin and destination
-zone.
-- **bike_skim** - from_node, to_node, dist
-- **walk_skim** - from_node, to_node, dist
+### Assign Demand
+Assign trips to road network links and calculate traffic volume.
 
-The "assign demand" step will load the demand matrices into the network and write out a daily traffic volume file:
+#### Outputs
 - **bike_vol** - from_node, to_node, bike_vol
 
 
