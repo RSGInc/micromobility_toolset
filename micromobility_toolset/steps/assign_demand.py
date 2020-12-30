@@ -36,17 +36,15 @@ def assign_demand(*scenarios):
 
         scenario.log("assigning trips to network...")
 
-        scenario.network.load_attribute_matrix(
-            matrix=total_demand,
-            load_name='bike_vol',
-            centroid_ids=scenario.zone_nodes,
-            varcoef=scenario.network_settings.get('route_varcoef_bike'),
-            max_cost=scenario.network_settings.get('max_cost_bike'))
+        scenario.network.load_path_attributes(
+            paths=scenario.zone_paths,
+            attributes=total_demand[scenario.reachable_zones],
+            load_name='bike_vol')
 
-        bike_vol = scenario.network.link_df['bike_vol'].fillna(0)
-        bmt = bike_vol * scenario.network.link_df['distance']
-        scenario.log(f"bike miles traveled: {int(bmt.sum())}")
+        link_df = scenario.network.get_link_attributes(['bike_vol', 'distance'])
+        bmt = (link_df['bike_vol'] * link_df['distance']).sum()
+        scenario.log(f"bike miles traveled: {int(bmt)}")
 
         scenario.log("writing results to bike_vol.csv...")
-        bike_vol.to_csv(scenario.data_file_path('bike_vol.csv'))
+        link_df['bike_vol'].to_csv(scenario.data_file_path('bike_vol.csv'))
         scenario.log('done.')

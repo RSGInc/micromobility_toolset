@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='micromobility_toolset',
-    version='0.1',
+    version='0.2',
     description='Micromobility Travel Modeling Toolkit',
     author='contributing authors',
     author_email='blake.rosenthal@rsginc.com',
@@ -18,5 +18,6 @@ setup(
         'numpy >= 1.16.1',
         'pandas >= 1.0.1',
         'pyyaml >= 5.3.1',
+        'python-igraph == 0.8.3',
     ]
 )
