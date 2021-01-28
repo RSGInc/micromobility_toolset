@@ -107,7 +107,92 @@ def read_links(file_path,
 
     return pd.concat([ab_df, ba_df], sort=True)
 
+def add_turn_edges(graph):
+    """add helper edges to graph intersections with turn attributes
+
+    edge attributes added:
+    - turn, bool: whether or not an edge represents a turn
+    - turn_type, str: either 'uturn', 'left', 'right', or 'straight'
+    - parallel_aadt, float: AADT of outgoing edge
+    - cross_aadt, float: max AADT at the intersection
+    """
+
+    # graph.es['turn'] = False  # default value
+
+    idxs = list(np.where(np.array(graph.outdegree()) > 2)[0])
+    intersections = list(graph.vs[idxs])
+
+    explode(graph, intersections)
+
+    turns = graph.es.select(turn=True)
+
+    # select source nodes for turns
+    turn_node_idxs = list(set([edge.source for edge in turns]))
+    turn_nodes = graph.vs[turn_node_idxs]
+
+    for node in turn_nodes:
+
+        in_edges = node.in_edges()
+        assert len(in_edges) == 1
+        in_edge = in_edges[0]
+
+        in_vector = xy_vector(in_edge.source_vertex, node)
+
+        legs = node.out_edges()
+        angles = []
+        aadt = []
+
+        for leg in legs:
+
+            successors = leg.target_vertex.successors()
+            assert len(successors) == 1
+
+            out_vector = xy_vector(node, successors[0])
+            angles.append(turn_angle(in_vector, out_vector))
+            aadt.append(successors[0].out_edges()[0]['AADT'])  # TODO: parameterize
+
+        min_angle = min(angles)
+        max_angle = max(angles)
+
+        turn_types = []
+
+        for i, this_angle in enumerate(angles):
+
+            if ( abs(this_angle) > ( 5.0 * pi / 6 )  ):
+                turn_types.append('uturn')
+
+            elif len(legs) >= 3:
+                if this_angle == min_angle:
+                    turn_types.append('right')
+
+                elif this_angle == max_angle:
+                    turn_types.append('left')
+
+                else:
+                    turn_types.append('straight')
+
+            else:
+                if min_angle < ( - pi / 4 ):
+                    if this_angle == min_angle:
+                        turn_types.append('right')
+                    else:
+                        turn_types.append('left')
+                else:
+                    if this_angle == max_angle:
+                        turn_types.append('left')
+                    else:
+                        turn_types.append('straight')
+
+        leg_idxs = [leg.index for leg in legs]
+        graph.es[leg_idxs]['turn_type'] = turn_types
+        graph.es[leg_idxs]['parallel_aadt'] = aadt
+        graph.es[leg_idxs]['cross_aadt'] = max(aadt)
+
 def explode(graph, nodes):
+    """replace given nodes in graph with edges representing each
+    incoming/outgoing pair
+    """
+
     # note: this would need to be modified to accommodate an
     # undirected network graph
 
@@ -166,6 +251,11 @@ def explode(graph, nodes):
     graph.add_edges(edges_to_replace, attributes=replaced_edge_attrs)
     graph.add_edges(edges_to_add, attributes={'turn': True})
 
+def xy_vector(node_1, node_2):
+
+    # TODO: parameterize
+    return ((node_1['xcoord'], node_1['ycoord']), (node_2['xcoord'], node_2['ycoord']))
+
 def turn_angle(vector1, vector2):
 
     xdiff1 = vector1[1][0] - vector1[0][0]
@@ -182,10 +272,6 @@ def turn_angle(vector1, vector2):
 
     # return relative angle
     return angle
-
-def xy_vector(node_1, node_2):
-
-    return ((node_1['xcoord'], node_1['ycoord']), (node_2['xcoord'], node_2['ycoord']))
 
 
 class Network():
@@ -217,7 +303,6 @@ class Network():
         self.check_network_completeness()
 
         self.graph = self.create_igraph(kwargs.get('saved_graph'))
-        self.add_turn_edges()
 
         if PREPROCESSORS:
             for func in PREPROCESSORS:
@@ -273,10 +358,10 @@ class Network():
 
         print('done.')
 
-        # print('adding turns... ', end='')
-        # add_turn_edges(graph)
+        print('adding turns... ', end='')
+        add_turn_edges(graph)
 
-        # print('done.')
+        print('done.')
 
         if graph_file:
 
@@ -285,86 +370,6 @@ class Network():
 
         return graph
 
-    def add_turn_edges(self):
-        """add helper edges to intersections with turn attributes
-
-        edge attributes added:
-        - turn, bool: whether or not an edge represents a turn
-        - turn_type, str: either 'uturn', 'left', 'right', or 'straight'
-        - parallel_aadt, float: AADT of outgoing edge
-        - cross_aadt, float: max AADT at the intersection
-        """
-
-        # self.graph.es['turn'] = False  # default value
-
-        idxs = list(np.where(np.array(self.graph.outdegree()) > 2)[0])
-        intersections = list(self.graph.vs[idxs])
-
-        explode(self.graph, intersections)
-
-        turns = self.graph.es.select(turn=True)
-
-        # select source nodes for turns
-        turn_node_idxs = list(set([edge.source for edge in turns]))
-        turn_nodes = self.graph.vs[turn_node_idxs]
-
-        for node in turn_nodes:
-
-            in_edges = node.in_edges()
-            assert len(in_edges) == 1
-            in_edge = in_edges[0]
-
-            in_vector = xy_vector(in_edge.source_vertex, node)
-
-            legs = node.out_edges()
-            angles = []
-            aadt = []
-
-            for leg in legs:
-
-                successors = leg.target_vertex.successors()
-                assert len(successors) == 1
-
-                out_vector = xy_vector(node, successors[0])
-                angles.append(turn_angle(in_vector, out_vector))
-                aadt.append(successors[0].out_edges()[0]['AADT'])  # TODO: parameterize
-
-            min_angle = min(angles)
-            max_angle = max(angles)
-
-            turn_types = []
-
-            for i, this_angle in enumerate(angles):
-
-                if ( abs(this_angle) > ( 5.0 * pi / 6 )  ):
-                    turn_types.append('uturn')
-
-                elif len(legs) >= 3:
-                    if this_angle == min_angle:
-                        turn_types.append('right')
-
-                    elif this_angle == max_angle:
-                        turn_types.append('left')
-
-                    else:
-                        turn_types.append('straight')
-
-                else:
-                    if min_angle < ( - pi / 4 ):
-                        if this_angle == min_angle:
-                            turn_types.append('right')
-                        else:
-                            turn_types.append('left')
-                    else:
-                        if this_angle == max_angle:
-                            turn_types.append('left')
-                        else:
-                            turn_types.append('straight')
-
-            leg_idxs = [leg.index for leg in legs]
-            self.graph.es[leg_idxs]['turn_type'] = turn_types
-            self.graph.es[leg_idxs]['parallel_aadt'] = aadt
-            self.graph.es[leg_idxs]['cross_aadt'] = max(aadt)
 
     def get_skim_matrix(self, node_ids, weights, max_cost=None):
         """skim network net starting from node_id to node_id, using specified
