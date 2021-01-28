@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from math import atan2, pi
 import numpy as np
 import pandas as pd
 import igraph as ig
@@ -106,6 +107,86 @@ def read_links(file_path,
 
     return pd.concat([ab_df, ba_df], sort=True)
 
+def explode(graph, nodes):
+    # note: this would need to be modified to accommodate an
+    # undirected network graph
+
+    edges_to_add = []
+    edges_to_remove = []
+    edges_to_replace = []
+    replaced_edge_attrs = {attr: [] for attr in graph.edge_attributes()}
+
+    for node in nodes:
+        node_attrs = node.attributes()
+        attrs = {k:node_attrs[k] for k in node_attrs if k not in ['name', 'id']}
+
+        in_nodes = []
+        out_nodes = []
+
+        for edge in node.in_edges():
+            # create a new node to reattach the in-edge to
+            new_node = graph.add_vertex(**attrs)
+            in_nodes.append(new_node)
+
+            # replace the edge's target vertex with the new one
+            # (can't actually change the target, so just copy and delete)
+            source_idx = edge.source
+            edge_attrs = edge.attributes()
+            edges_to_remove.append(edge)
+
+            edges_to_replace.append((source_idx, new_node.index))
+            for attr, val in edge_attrs.items():
+                replaced_edge_attrs[attr].append(val)
+
+
+
+        for edge in node.out_edges():
+            # create a new node to reattach the out-edge to
+            new_node = graph.add_vertex(**attrs)
+            out_nodes.append(new_node)
+
+            # replace the edge's source vertex with the new one
+            # (can't actually change the source, so just copy and delete)
+            target_idx = edge.target
+            edge_attrs = edge.attributes()
+            edges_to_remove.append(edge)
+
+            edges_to_replace.append((new_node.index, target_idx))
+            for attr, val in edge_attrs.items():
+                replaced_edge_attrs[attr].append(val)
+
+        # add the "turn" edges
+        for i_node in in_nodes:
+            for o_node in out_nodes:
+                edges_to_add.append((i_node.index, o_node.index))
+
+        # node.delete()
+
+    graph.delete_edges(edges_to_remove)
+    graph.add_edges(edges_to_replace, attributes=replaced_edge_attrs)
+    graph.add_edges(edges_to_add, attributes={'turn': True})
+
+def turn_angle(vector1, vector2):
+
+    xdiff1 = vector1[1][0] - vector1[0][0]
+    xdiff2 = vector2[1][0] - vector2[0][0]
+    ydiff1 = vector1[1][1] - vector1[0][1]
+    ydiff2 = vector2[1][1] - vector2[0][1]
+
+    angle = atan2(ydiff2,xdiff2) - atan2(ydiff1,xdiff1)
+
+    if angle > pi:
+        angle = angle - 2 * pi
+    if angle < -pi:
+        angle = 2 * pi + angle
+
+    # return relative angle
+    return angle
+
+def xy_vector(node_1, node_2):
+
+    return ((node_1['xcoord'], node_1['ycoord']), (node_2['xcoord'], node_2['ycoord']))
+
 
 class Network():
 
@@ -136,6 +217,7 @@ class Network():
         self.check_network_completeness()
 
         self.graph = self.create_igraph(kwargs.get('saved_graph'))
+        self.add_turn_edges()
 
         if PREPROCESSORS:
             for func in PREPROCESSORS:
@@ -183,10 +265,18 @@ class Network():
         link_df = self.link_df[[self.link_from_node, self.link_to_node, *self.link_df.columns]]
         node_df = self.node_df[[self.node_name, *self.node_df.columns]]
 
+        print('building graph... ', end='')
         graph = ig.Graph.DataFrame(
             edges=link_df,
             vertices=node_df,
             directed=True)
+
+        print('done.')
+
+        # print('adding turns... ', end='')
+        # add_turn_edges(graph)
+
+        # print('done.')
 
         if graph_file:
 
@@ -194,6 +284,87 @@ class Network():
             graph.write(graph_file)
 
         return graph
+
+    def add_turn_edges(self):
+        """add helper edges to intersections with turn attributes
+
+        edge attributes added:
+        - turn, bool: whether or not an edge represents a turn
+        - turn_type, str: either 'uturn', 'left', 'right', or 'straight'
+        - parallel_aadt, float: AADT of outgoing edge
+        - cross_aadt, float: max AADT at the intersection
+        """
+
+        # self.graph.es['turn'] = False  # default value
+
+        idxs = list(np.where(np.array(self.graph.outdegree()) > 2)[0])
+        intersections = list(self.graph.vs[idxs])
+
+        explode(self.graph, intersections)
+
+        turns = self.graph.es.select(turn=True)
+
+        # select source nodes for turns
+        turn_node_idxs = list(set([edge.source for edge in turns]))
+        turn_nodes = self.graph.vs[turn_node_idxs]
+
+        for node in turn_nodes:
+
+            in_edges = node.in_edges()
+            assert len(in_edges) == 1
+            in_edge = in_edges[0]
+
+            in_vector = xy_vector(in_edge.source_vertex, node)
+
+            legs = node.out_edges()
+            angles = []
+            aadt = []
+
+            for leg in legs:
+
+                successors = leg.target_vertex.successors()
+                assert len(successors) == 1
+
+                out_vector = xy_vector(node, successors[0])
+                angles.append(turn_angle(in_vector, out_vector))
+                aadt.append(successors[0].out_edges()[0]['AADT'])  # TODO: parameterize
+
+            min_angle = min(angles)
+            max_angle = max(angles)
+
+            turn_types = []
+
+            for i, this_angle in enumerate(angles):
+
+                if ( abs(this_angle) > ( 5.0 * pi / 6 )  ):
+                    turn_types.append('uturn')
+
+                elif len(legs) >= 3:
+                    if this_angle == min_angle:
+                        turn_types.append('right')
+
+                    elif this_angle == max_angle:
+                        turn_types.append('left')
+
+                    else:
+                        turn_types.append('straight')
+
+                else:
+                    if min_angle < ( - pi / 4 ):
+                        if this_angle == min_angle:
+                            turn_types.append('right')
+                        else:
+                            turn_types.append('left')
+                    else:
+                        if this_angle == max_angle:
+                            turn_types.append('left')
+                        else:
+                            turn_types.append('straight')
+
+            leg_idxs = [leg.index for leg in legs]
+            self.graph.es[leg_idxs]['turn_type'] = turn_types
+            self.graph.es[leg_idxs]['parallel_aadt'] = aadt
+            self.graph.es[leg_idxs]['cross_aadt'] = max(aadt)
 
     def get_skim_matrix(self, node_ids, weights, max_cost=None):
         """skim network net starting from node_id to node_id, using specified
@@ -265,7 +436,7 @@ class Network():
     def get_link_attributes(self, link_attrs):
 
         if not isinstance(link_attrs, list):
-            
+
             link_attrs = [link_attrs]
         # add new column to link_df
 
@@ -274,7 +445,7 @@ class Network():
             self.link_to_node: self.graph.es[self.link_to_node]}
 
         for attr in link_attrs:
-            
+
             data[attr] = self.graph.es[attr]
 
         return pd.DataFrame(data).set_index([self.link_from_node, self.link_to_node])
