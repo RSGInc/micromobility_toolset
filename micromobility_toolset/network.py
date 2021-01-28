@@ -448,4 +448,4 @@ class Network():
 
             data[attr] = self.graph.es[attr]
 
-        return pd.DataFrame(data).set_index([self.link_from_node, self.link_to_node])
+        return pd.DataFrame(data).set_index([self.link_from_node, self.link_to_node]).dropna()

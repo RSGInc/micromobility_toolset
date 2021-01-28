@@ -42,6 +42,7 @@ def assign_demand(*scenarios):
             load_name='bike_vol')
 
         link_df = scenario.network.get_link_attributes(['bike_vol', 'distance'])
+        link_df = link_df[link_df.bike_vol != 0]
         bmt = (link_df['bike_vol'] * link_df['distance']).sum()
         scenario.log(f"bike miles traveled: {int(bmt)}")
 
