@@ -428,15 +428,21 @@ class Network():
         attribute value for each intermediate link.
         """
 
-        self.graph.es[load_name] = 0
-
         assert len(paths) == len(attributes)
 
-        for i, attr in enumerate(attributes):
+        edges = []
+        for p in paths:
+            edges.extend(p)
 
-            path = paths[i]
-            prev = np.array(self.graph.es[path][load_name])
-            self.graph.es[path][load_name] = list(prev + attr)
+        edges = np.unique(edges)
+
+        values = np.zeros(max(edges)+1)
+        for i, path in enumerate(paths):
+
+            values[path] += attributes[i]
+
+        edges = np.nonzero(values)[0]
+        self.graph.es[list(edges)][load_name] = list(values[edges])
 
     def get_link_attributes(self, link_attrs):
 
