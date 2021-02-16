@@ -209,10 +209,10 @@ def _get_zone_diff(base_scenario, build_scenario):
 
 class Scenario():
 
-    def __init__(self, name, config, data):
+    def __init__(self, name, config, inputs, outputs):
 
         self._set_name(name)
-        self._set_dirs(config, data)
+        self._set_dirs(config, inputs, outputs)
 
         # dictionary of property values
         self._cache = {}
@@ -224,21 +224,35 @@ class Scenario():
         
         self.name = name
 
-    def _set_dirs(self, config, data):
+    def _set_dirs(self, config, inputs, outputs):
 
-        for path in [config, data]:
+        for path in [config, inputs]:
             assert os.path.isdir(path), f'Could not find directory {path}'
 
+        if not os.path.isdir(outputs):
+            os.mkdir(outputs)
+
         self._config_dir = config
-        self._data_dir = data
+        self._input_dir = inputs
+        self._output_dir = outputs
 
     def config_file_path(self, filename):
 
         return os.path.join(self._config_dir, filename)
 
     def data_file_path(self, filename):
+        """
+        If user is providing a file from the input directory, use it.
+        Otherwise write newly generated data to the output directory
+        """
 
-        return os.path.join(self._data_dir, filename)
+        data_path = os.path.join(self._input_dir, filename)
+
+        if os.path.exists(data_path):
+            return data_path
+
+        else:
+            return os.path.join(self._output_dir, filename)
 
     def cache(func):
         """
