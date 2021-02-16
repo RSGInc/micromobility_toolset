@@ -59,19 +59,14 @@ class Skim():
             data.set_index([orig_col, dest_col], inplace=True)
 
         if mapping:
-            # if not all(i in index_vals for i in mapping):
-            #     raise IndexError('DataFrame index is incomplete for given mapping')
-
-            o_vals = np.repeat(mapping, len(mapping))
-            d_vals = np.tile(mapping, len(mapping))
 
             # only retrieve rows from mapping
             data = data[data.index.isin(mapping, level=0) & data.index.isin(mapping, level=1)]
-            data = data.reindex([o_vals, d_vals], copy=False, fill_value=0)
 
-        else:
-            o_vals = data.index.get_level_values(0)
-            d_vals = data.index.get_level_values(1)
+        o_vals = data.index.get_level_values(0)
+        d_vals = data.index.get_level_values(1)
+
+        if not mapping:
 
             mapping = sorted(list(set(list(o_vals) + list(d_vals))))
 
@@ -100,14 +95,14 @@ class Skim():
 
         np_matrix = np.zeros(dim)  # .astype(dtype)
 
-        o_index = [mapping.index(i) for i in o_vals]
-        d_index = [mapping.index(i) for i in d_vals]
+        o_mask = np.searchsorted(mapping, o_vals)
+        d_mask = np.searchsorted(mapping, d_vals)
 
         # FIX: use data.ndim here
         if data.shape[1] > 1:
-            np_matrix[o_index, d_index, :] = data.iloc[:, 0:].to_numpy()
+            np_matrix[o_mask, d_mask, :] = data.iloc[:, 0:].to_numpy()
         else:
-            np_matrix[o_index, d_index] = data.iloc[:, 0].to_numpy()
+            np_matrix[o_mask, d_mask] = data.iloc[:, 0].to_numpy()
 
         self._matrix = np_matrix
         self._length = matrix_length

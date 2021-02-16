@@ -390,7 +390,7 @@ class Scenario():
         """
         # TODO: parameterize mode
 
-        self.log(f'calculating network paths for {len(self.reachable_zones[0])} zone pairs...')
+        self.log(f'calculating network paths for {len(self.reachable_zones[0])} zone pairs... ')
 
         zone_nodes = np.array(self.zone_nodes).astype(int)
         zone_array = np.array(self.zone_list).astype(int)
@@ -413,6 +413,7 @@ class Scenario():
 
             paths.extend(path_list)
 
+        self.log('done.')
         return paths
 
     def _read_skim_file(self, file_path, table_name):

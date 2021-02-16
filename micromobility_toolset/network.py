@@ -430,6 +430,8 @@ class Network():
 
         assert len(paths) == len(attributes)
 
+        print(f'loading {len(paths)} paths onto network... ', end='')
+
         edges = []
         for p in paths:
             edges.extend(p)
@@ -443,6 +445,8 @@ class Network():
 
         edges = np.nonzero(values)[0]
         self.graph.es[list(edges)][load_name] = list(values[edges])
+
+        print('done.')
 
     def get_link_attributes(self, link_attrs):
 
