@@ -438,13 +438,13 @@ class Network():
 
         edges = np.unique(edges)
 
-        values = np.zeros(max(edges)+1)
+        values = np.zeros(len(edges))
         for i, path in enumerate(paths):
 
-            values[path] += attributes[i]
+            idxs = np.searchsorted(edges, path)
+            values[idxs] += attributes[i]
 
-        edges = np.nonzero(values)[0]
-        self.graph.es[list(edges)][load_name] = list(values[edges])
+        self.graph.es[list(edges)][load_name] = list(values)
 
         print('done.')
 
