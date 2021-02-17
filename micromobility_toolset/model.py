@@ -108,13 +108,13 @@ def _read_dataframe(file_path, index_col, table_name=None):
 
 
 def filter_impact_area(base_scenario, build_scenario=None, zone_ids=None):
-    
+
     if not build_scenario:
         assert zone_ids is not None, \
             "need either a comparison scenario or a list of zone IDs"
 
         base_mask = base_scenario.zone_df.index.isin(zone_ids)
-        
+
     else:
         zone_nodes = _get_zone_diff(base_scenario, build_scenario)
 
@@ -130,21 +130,23 @@ def filter_impact_area(base_scenario, build_scenario=None, zone_ids=None):
         del build_scenario.zone_list
 
         build_scenario.log(f'using {len(build_scenario.zone_df.index)} zones')
-    
+
     base_scenario.zone_df = base_scenario.zone_df[base_mask]
     del base_scenario.zone_nodes
     del base_scenario.zone_list
 
-    base_scenario.log(f'using {len(base_scenario.zone_df.index)} zones')
+    base_scenario.log(
+        f'warning!! using {len(base_scenario.zone_df.index)} zones. '
+        'make sure to delete output matrices if subsequent runs use more zones.')
 
 
 def _get_zone_diff(base_scenario, build_scenario):
     base_zone_df = base_scenario.zone_df
     build_zone_df = build_scenario.zone_df
-    
+
     for scenario, df in zip([base_scenario, build_scenario], [base_zone_df, build_zone_df]):
         scenario.log(f'filtering {len(df.index)} zones...')
-    
+
     changed_nodes = []
 
     base_links = base_scenario.network.link_df.round(4).reset_index()
@@ -189,7 +191,7 @@ def _get_zone_diff(base_scenario, build_scenario):
         base_scenario.log(f'zones differ from {build_scenario.name} by {len(zone_nodes)} zones.')
 
         changed_nodes.extend(zone_nodes)
-    
+
     if not changed_nodes:
         return
 
@@ -221,7 +223,7 @@ class Scenario():
         self._tables = {}
 
     def _set_name(self, name):
-        
+
         self.name = name
 
     def _set_dirs(self, config, inputs, outputs):
@@ -324,7 +326,7 @@ class Scenario():
 
     def log(self, message):
         self.logger.info(message)
-        
+
     @cache
     def zone_settings(self):
         return self._read_settings_file('zone.yaml')
@@ -359,7 +361,7 @@ class Scenario():
         )
 
         return net
-    
+
     @cache
     def zone_df(self):
         file_name = self.zone_settings.get('zone_file_name')
@@ -371,7 +373,7 @@ class Scenario():
             self.data_file_path(file_name),
             zone_col,
             table_name=zone_table)
-        
+
         return zone_df
 
 
@@ -387,6 +389,8 @@ class Scenario():
 
     @cache
     def num_zones(self):
+
+        self.log(f'num zones: {len(self.zone_list)}')
         return len(self.zone_list)
 
     @cache
@@ -411,7 +415,7 @@ class Scenario():
 
         paths = []
         for orig_idx in range(len(zone_nodes)):
-            
+
             # skim indices of reachable destination zones
             dest_idxs = self.reachable_zones[1][np.where(self.reachable_zones[0]==orig_idx)[0]]
             orig_node = zone_nodes[orig_idx]  # note: zone_nodes have the same index as skim levels
@@ -469,24 +473,24 @@ class Scenario():
 
         if os.path.exists(file_path):
 
-            skim = self._read_skim_file(file_path, skim_table)
+            matrix = self._read_skim_file(file_path, skim_table).to_numpy()
+            return matrix
 
-        else:
-            self.log(f'skimming {mode} skim from network...')
-            matrix = self.network.get_skim_matrix(
-                self.zone_nodes,
-                self.network_settings.get(f'weights_{mode}'),
-                max_cost=self.network_settings.get(f'max_cost_{mode}'))
+        self.log(f'skimming {mode} skim from network...')
+        matrix = self.network.get_skim_matrix(
+            self.zone_nodes,
+            self.network_settings.get(f'weights_{mode}'),
+            max_cost=self.network_settings.get(f'max_cost_{mode}'))
 
-            skim = Skim(matrix,
-                    mapping=self.zone_list,
-                    orig_col=ozone_col,
-                    dest_col=dzone_col,
-                    col_names=[self.network_settings.get('skim_distance_col', 'distance')])
+        skim = Skim(matrix,
+                mapping=self.zone_list,
+                orig_col=ozone_col,
+                dest_col=dzone_col,
+                col_names=[self.network_settings.get('skim_distance_col', 'distance')])
 
-            if self.network_settings.get(f'save_{mode}_skim', False):
-                self.log(f'saving {mode} skim to {os.path.basename(os.path.dirname(file_path))}...')
-                skim.to_csv(file_path)
+        if self.network_settings.get(f'save_{mode}_skim', False):
+            self.log(f'saving {mode} skim to {os.path.basename(os.path.dirname(file_path))}...')
+            skim.to_csv(file_path)
 
         return skim.to_numpy()
 
@@ -589,4 +593,3 @@ class Scenario():
 
         filepath = self.data_file_path(filename)
         skim.to_csv(filepath)
-
