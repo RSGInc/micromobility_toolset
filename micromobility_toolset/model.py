@@ -30,6 +30,7 @@ import os
 import time
 import yaml
 import logging
+import warnings
 import sqlite3
 
 import numpy as np
@@ -41,6 +42,28 @@ from .network import Network
 STEPS = {}
 
 
+def config_logger():
+
+    # console handler
+    ch = logging.StreamHandler()
+    formatter = logging.Formatter('%(name)s - %(message)s')
+    ch.setFormatter(formatter)
+    ch.setLevel(logging.INFO)
+
+    # file handler
+    logfile = f"micromobility_toolset_{time.strftime('%Y%b%d_%H_%M_%S_%p')}.log"
+    fh = logging.FileHandler(logfile)
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    fh.setFormatter(formatter)
+    fh.setLevel(logging.DEBUG)
+
+    logging.captureWarnings(True)
+    logging.basicConfig(
+        level=logging.DEBUG,
+        handlers=[ch, fh],
+        force=True)
+
+
 def step():
     """
     Wrap each model step with the @step decorator.
@@ -48,6 +71,7 @@ def step():
     This will simply add the decorated function to this module's STEPS dictionary when the
     function is imported.
     """
+    
     def decorator(func):
         name = func.__name__
 
@@ -71,19 +95,23 @@ def run(steps, *scenarios):
     Run a list of step names, in order. They will be run in the order they are given,
     so make sure the data dependencies make sense.
     """
+
     if not isinstance(steps, list):
         steps = [steps]
 
     if not all(step in STEPS for step in steps):
         raise KeyError(f'Invalid step list {steps}')
 
+    config_logger()
+    logger = logging.getLogger('Micromobility Toolset')
+
     for step in steps:
         start_time = time.perf_counter()
-        print(f"\n{step.upper()}")
+        logger.info(step.upper())
         step_func = STEPS.get(step)
         step_func(*scenarios)
         stop_time = time.perf_counter()
-        print(f'{step} completed in {stop_time - start_time:0.4f} seconds')
+        logger.info(f'{step} completed in {stop_time - start_time:0.4f} seconds')
 
 
 def _read_dataframe(file_path, index_col, table_name=None):
@@ -109,6 +137,7 @@ def _read_dataframe(file_path, index_col, table_name=None):
 
 def filter_impact_area(base_scenario, build_scenario=None, zone_ids=None):
 
+    logger = logging.getLogger('Impact Area')
     if not build_scenario:
         assert zone_ids is not None, \
             "need either a comparison scenario or a list of zone IDs"
@@ -129,14 +158,14 @@ def filter_impact_area(base_scenario, build_scenario=None, zone_ids=None):
         del build_scenario.zone_nodes
         del build_scenario.zone_list
 
-        build_scenario.log(f'using {len(build_scenario.zone_df.index)} zones')
+        logger.info(f'using {len(build_scenario.zone_df.index)} zones')
 
     base_scenario.zone_df = base_scenario.zone_df[base_mask]
     del base_scenario.zone_nodes
     del base_scenario.zone_list
 
-    base_scenario.log(
-        f'warning!! using {len(base_scenario.zone_df.index)} zones. '
+    logger.warn(
+        f'using {len(base_scenario.zone_df.index)} zones. '
         'make sure to delete output matrices if subsequent runs use more zones.')
 
 
@@ -145,7 +174,7 @@ def _get_zone_diff(base_scenario, build_scenario):
     build_zone_df = build_scenario.zone_df
 
     for scenario, df in zip([base_scenario, build_scenario], [base_zone_df, build_zone_df]):
-        scenario.log(f'filtering {len(df.index)} zones...')
+        scenario.logger.info(f'filtering {len(df.index)} zones...')
 
     changed_nodes = []
 
@@ -154,13 +183,13 @@ def _get_zone_diff(base_scenario, build_scenario):
     link_diff = pd.concat([base_links, build_links]).drop_duplicates(keep=False)
 
     if link_diff.empty:
-        base_scenario.log(f'links match {build_scenario.name}')
+        base_scenario.logger.info(f'links match {build_scenario.name}')
 
     else:
         from_nodes = list(link_diff[base_scenario.network_settings.get('from_name')])
         to_nodes = list(link_diff[base_scenario.network_settings.get('to_name')])
         link_nodes = list(set(from_nodes + to_nodes))
-        base_scenario.log(f'links differ from {build_scenario.name} by {len(link_nodes)} nodes.')
+        base_scenario.logger.info(f'links differ from {build_scenario.name} by {len(link_nodes)} nodes.')
 
         changed_nodes.extend(link_nodes)
 
@@ -170,11 +199,11 @@ def _get_zone_diff(base_scenario, build_scenario):
     node_diff = pd.concat([base_nodes, build_nodes]).drop_duplicates(keep=False)
 
     if node_diff.empty:
-        base_scenario.log(f'nodes match {build_scenario.name}')
+        base_scenario.logger.info(f'nodes match {build_scenario.name}')
 
     else:
         nodes = list(set(node_diff[base_scenario.network_settings.get('node_name')]))
-        base_scenario.log(f'nodes differ from {build_scenario.name} by {len(nodes)} nodes.')
+        base_scenario.logger.info(f'nodes differ from {build_scenario.name} by {len(nodes)} nodes.')
 
         changed_nodes.extend(nodes)
 
@@ -184,18 +213,18 @@ def _get_zone_diff(base_scenario, build_scenario):
         build_scenario.zone_df.round(4).reset_index()]).drop_duplicates(keep=False)
 
     if zone_diff.empty:
-        base_scenario.log(f'zones match {build_scenario.name}')
+        base_scenario.logger.info(f'zones match {build_scenario.name}')
 
     else:
         zone_nodes = list(set(zone_diff[node_col]))
-        base_scenario.log(f'zones differ from {build_scenario.name} by {len(zone_nodes)} zones.')
+        base_scenario.logger.info(f'zones differ from {build_scenario.name} by {len(zone_nodes)} zones.')
 
         changed_nodes.extend(zone_nodes)
 
     if not changed_nodes:
         return
 
-    build_scenario.log('getting nearby zones from the network...')
+    build_scenario.logger.info('getting nearby zones from the network...')
     nearby_zones = build_scenario.network.get_nearby_pois(
         build_zone_df[node_col],
         changed_nodes,
@@ -307,25 +336,8 @@ class Scenario():
     @cache
     def logger(self):
         logger = logging.getLogger(self.name)
-        logger.setLevel(logging.INFO)
-
-        # console handler
-        ch = logging.StreamHandler()
-        formatter = logging.Formatter('%(name)s - %(message)s')
-        ch.setFormatter(formatter)
-
-        # file handler
-        fh = logging.FileHandler(f'{self.name}.log')
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        fh.setFormatter(formatter)
-
-        logger.addHandler(ch)
-        logger.addHandler(fh)
 
         return logger
-
-    def log(self, message):
-        self.logger.info(message)
 
     @cache
     def zone_settings(self):
@@ -342,7 +354,7 @@ class Scenario():
     @cache
     def network(self):
 
-        self.log('creating network ...')
+        self.logger.info('creating network ...')
         net_settings = self.network_settings.copy()
 
         link_file = self.data_file_path(net_settings.get('link_file'))
@@ -390,7 +402,7 @@ class Scenario():
     @cache
     def num_zones(self):
 
-        self.log(f'num zones: {len(self.zone_list)}')
+        self.logger.info(f'num zones: {len(self.zone_list)}')
         return len(self.zone_list)
 
     @cache
@@ -408,7 +420,7 @@ class Scenario():
         """
         # TODO: parameterize mode
 
-        self.log(f'calculating network paths for {len(self.reachable_zones[0])} zone pairs... ')
+        self.logger.info(f'calculating network paths for {len(self.reachable_zones[0])} zone pairs... ')
 
         zone_nodes = np.array(self.zone_nodes).astype(int)
         zone_array = np.array(self.zone_list).astype(int)
@@ -431,7 +443,7 @@ class Scenario():
 
             paths.extend(path_list)
 
-        self.log('done.')
+        self.logger.info('done.')
         return paths
 
     def _read_skim_file(self, file_path, table_name):
@@ -444,7 +456,7 @@ class Scenario():
         dir_name = os.path.basename(os.path.dirname(file_path))
 
         # 3 dimensional matrix with time and distance
-        self.log(f'reading {file_name} ...')
+        self.logger.info(f'reading {file_name} ...')
         if file_path.endswith('.csv'):
             skim = Skim.from_csv(
                 file_path,
@@ -476,7 +488,7 @@ class Scenario():
             matrix = self._read_skim_file(file_path, skim_table).to_numpy()
             return matrix
 
-        self.log(f'skimming {mode} skim from network...')
+        self.logger.info(f'skimming {mode} skim from network...')
         matrix = self.network.get_skim_matrix(
             self.zone_nodes,
             self.network_settings.get(f'weights_{mode}'),
@@ -489,7 +501,7 @@ class Scenario():
                 col_names=[self.network_settings.get('skim_distance_col', 'distance')])
 
         if self.network_settings.get(f'save_{mode}_skim', False):
-            self.log(f'saving {mode} skim to {os.path.basename(os.path.dirname(file_path))}...')
+            self.logger.info(f'saving {mode} skim to {os.path.basename(os.path.dirname(file_path))}...')
             skim.to_csv(file_path)
 
         return skim.to_numpy()

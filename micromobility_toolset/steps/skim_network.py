@@ -1,35 +1,28 @@
+import logging
 import numpy as np
 
 from ..model import step
 
 @step()
 def skim_network(*scenarios):
-    """Skim the network for bike and walk distance matrices.
+    """Skim the network for bike cost matrix.
 
     This standalone step will generate skims for the provided scenarios.
-    
-    Network and skim configurations should be described in
-    'network.yaml' and 'skims.yaml' respectively.
-
     """
 
     for scenario in scenarios:
 
-        scenario.log('getting skims...')
+        scenario.logger.info('getting skims...')
 
-        scenario.log('bike skim stats')
-        print_skim_stats(scenario.bike_skim)
+        scenario.logger.info('bike skim stats')
 
-        # print(f"\n{scenario.name} walk skim stats")
-        # print_skim_stats(scenario.walk_skim)
+        skim_matrix = scenario.bike_skim
 
+        scenario.logger.info(f'zone count: {skim_matrix.shape[0]}')
+        scenario.logger.info(f'min dist: {np.amin(skim_matrix)}')
+        scenario.logger.info(f'max dist: {np.amax(skim_matrix)}')
+        scenario.logger.info(f'median: {np.median(skim_matrix)}')
+        scenario.logger.info(f'mean: {np.mean(skim_matrix)}')
+        scenario.logger.info(f'zero count: {np.count_nonzero(skim_matrix==0)}')
+        scenario.logger.info(f'non zero count: {np.count_nonzero(skim_matrix)}')
 
-def print_skim_stats(skim_matrix):
-
-    print(f'zone count: {skim_matrix.shape[0]}')
-    print(f'min dist: {np.amin(skim_matrix)}')
-    print(f'max dist: {np.amax(skim_matrix)}')
-    print(f'median: {np.median(skim_matrix)}')
-    print(f'mean: {np.mean(skim_matrix)}')
-    print(f'zero count: {np.count_nonzero(skim_matrix==0)}')
-    print(f'non zero count: {np.count_nonzero(skim_matrix)}')
