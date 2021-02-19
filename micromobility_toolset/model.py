@@ -346,6 +346,11 @@ class Scenario():
 
         return settings
 
+    def logger(self):
+        logger = logging.getLogger(self.name)
+
+        return logger
+
     @cache
     def zone_settings(self):
         # TODO: dump into logger debug with some nice-ish
@@ -417,7 +422,7 @@ class Scenario():
     @cache
     def num_zones(self):
 
-        self.logger.debug(f'num zones: {len(self.zone_list)}')
+        self.logger.info(f'num zones: {len(self.zone_list)}')
         return len(self.zone_list)
 
     @cache
