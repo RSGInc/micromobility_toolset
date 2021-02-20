@@ -244,6 +244,7 @@ class Scenario():
 
         self._set_name(name)
         self._set_dirs(config, inputs, outputs)
+        self._set_logger()
 
         # dictionary of property values
         self._cache = {}
@@ -266,6 +267,10 @@ class Scenario():
         self._config_dir = config
         self._input_dir = inputs
         self._output_dir = outputs
+
+    def _set_logger(self):
+
+        self.logger = logging.getLogger(self.name)
 
     def config_file_path(self, filename):
 
@@ -305,42 +310,46 @@ class Scenario():
 
         def get_prop(self):
             if name in self._cache:
-                # returning cached value for 'name'
                 return self._cache[name]
 
-            # calling 'name' for the first time
+            self.logger.debug(f"calling '{name}' for the first time")
             ret = func(self)
             self._cache[name] = ret
 
             return ret
 
         def set_prop(self, value):
+            self.logger.debug(f"manually setting '{name}' in cache")
             self._cache[name] = value
 
         def del_prop(self):
             if name in self._cache:
+                self.logger.debug(f"deleting '{name}' from cache")
                 del self._cache[name]
+
+            else:
+                self.logger.debug(f"'del {name}' was called but '{name}' is not in cache") 
 
         return property(get_prop, set_prop, del_prop)
 
     def clear_cache(self):
+        self.logger.debug('clearing cache')
         self._cache = {}
 
     def _read_settings_file(self, filename):
 
-        with open(self.config_file_path(filename)) as f:
+        file_path = self.config_file_path(filename)
+        self.logger.debug(f'reading settings from {file_path}')
+
+        with open(file_path) as f:
             settings = yaml.safe_load(f.read())
 
         return settings
 
     @cache
-    def logger(self):
-        logger = logging.getLogger(self.name)
-
-        return logger
-
-    @cache
     def zone_settings(self):
+        # TODO: dump into logger debug with some nice-ish
+        # formatting along with network and trip settings
         return self._read_settings_file('zone.yaml')
 
     @cache
@@ -381,10 +390,16 @@ class Scenario():
         node_col = self.zone_settings.get('zone_node_column')
         zone_table = self.zone_settings.get('zone_table_name')
 
+        file_path = self.data_file_path(file_name)
+        self.logger.debug(f'reading zones from {file_path}')
+
         zone_df = _read_dataframe(
-            self.data_file_path(file_name),
+            file_path, 
             zone_col,
             table_name=zone_table)
+
+        self.logger.debug(f'zone dataframe columns: {zone_df.columns}')
+        self.logger.debug(f'number of zones: {len(zone_df)}')
 
         return zone_df
 
@@ -402,7 +417,7 @@ class Scenario():
     @cache
     def num_zones(self):
 
-        self.logger.info(f'num zones: {len(self.zone_list)}')
+        self.logger.debug(f'num zones: {len(self.zone_list)}')
         return len(self.zone_list)
 
     @cache
@@ -580,16 +595,19 @@ class Scenario():
         table_name = self.trip_settings.get('trip_tables', {}).get(segment)
 
         if segment in self._tables:
+            self.logger.debug(f'returning cached {segment} trip matrix')
             return self._tables.get(segment)
 
         file_path = self.data_file_path(table_file)
 
+        self.logger.debug(f'reading {segment} trip matrix from {file_path}')
         return self._read_zone_matrix(file_path, table_name=table_name)
 
     def save_trip_matrix(self, matrix, segment):
 
         table_file = self.trip_settings.get('trip_files').get(segment)
 
+        self.logger.debug(f'caching {segment} trip matrix')
         self._tables[segment] = matrix
 
         col_names = self.trip_settings.get('modes')
@@ -604,4 +622,5 @@ class Scenario():
                 col_names=col_names)
 
         filepath = self.data_file_path(filename)
+        self.logger.debug(f'writing matrix with shape {matrix.shape} and headers {col_names} to {filename}')
         skim.to_csv(filepath)

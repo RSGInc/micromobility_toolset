@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import logging
 from math import atan2, pi
 import numpy as np
 import pandas as pd
@@ -19,14 +20,16 @@ def preprocessor():
     return decorator
 
 
-def read_nodes(file_path, table_name, node_name, attributes):
+def read_nodes(file_path, table_name, node_name, node_x_name, node_y_name):
     """read links from sqlite database into network data structure, void
 
     file_path : name of link file
     node_name : column name of node id
-    attributes : dictionary of { name in network data structure : name in database } """
+    node_x_name: column of node x coordinate
+    node_y_name: column of node y coordinate
+    """
 
-    columns = list(attributes.values()) + [node_name]
+    columns = [node_name, node_x_name, node_y_name]
 
     if file_path.endswith('.csv'):
         node_df = pd.read_csv(
@@ -45,9 +48,6 @@ def read_nodes(file_path, table_name, node_name, attributes):
 
     else:
         raise TypeError(f"cannot read nodes from filetype {file_path}")
-
-    name_map = {v: k for k, v in attributes.items()}
-    node_df.rename(name_map, inplace=True)
 
     return node_df
 
@@ -107,7 +107,7 @@ def read_links(file_path,
 
     return pd.concat([ab_df, ba_df], sort=True)
 
-def add_turn_edges(graph):
+def add_turn_edges(graph, node_x_name, node_y_name):
     """add helper edges to graph intersections with turn attributes
 
     edge attributes added:
@@ -136,7 +136,7 @@ def add_turn_edges(graph):
         assert len(in_edges) == 1
         in_edge = in_edges[0]
 
-        in_vector = xy_vector(in_edge.source_vertex, node)
+        in_vector = xy_vector(in_edge.source_vertex, node, x=node_x_name, y=node_y_name)
 
         legs = node.out_edges()
         angles = []
@@ -147,7 +147,7 @@ def add_turn_edges(graph):
             successors = leg.target_vertex.successors()
             assert len(successors) == 1
 
-            out_vector = xy_vector(node, successors[0])
+            out_vector = xy_vector(node, successors[0], x=node_x_name, y=node_y_name)
             angles.append(turn_angle(in_vector, out_vector))
             aadt.append(successors[0].out_edges()[0]['AADT'])  # TODO: parameterize
 
@@ -251,10 +251,9 @@ def explode(graph, nodes):
     graph.add_edges(edges_to_replace, attributes=replaced_edge_attrs)
     graph.add_edges(edges_to_add, attributes={'turn': True})
 
-def xy_vector(node_1, node_2):
+def xy_vector(node_1, node_2, x, y):
 
-    # TODO: parameterize
-    return ((node_1['xcoord'], node_1['ycoord']), (node_2['xcoord'], node_2['ycoord']))
+    return ((node_1[x], node_1[y]), (node_2[x], node_2[y]))
 
 def turn_angle(vector1, vector2):
 
@@ -279,7 +278,12 @@ class Network():
     def __init__(self, **kwargs):
         """initialize network data structure, void"""
 
+        self.name = kwargs.get('name', 'Network')
+        self.logger = logging.getLogger(self.name)
+
         self.node_name = kwargs.get('node_name')
+        self.node_x_name = kwargs.get('node_x_name')
+        self.node_y_name = kwargs.get('node_y_name')
         self.link_name = kwargs.get('link_name')
         self.link_from_node = kwargs.get('from_name')
         self.link_to_node = kwargs.get('to_name')
@@ -288,7 +292,8 @@ class Network():
             kwargs.get('node_file'),
             kwargs.get('node_table_name'),
             kwargs.get('node_name'),
-            kwargs.get('node_attributes')
+            self.node_x_name,
+            self.node_y_name,
         )
 
         self.link_df = read_links(
@@ -302,13 +307,26 @@ class Network():
 
         self.check_network_completeness()
 
-        self.graph = self.create_igraph(kwargs.get('saved_graph'))
+        graph_file = kwargs.get('saved_graph')
 
-        if PREPROCESSORS:
-            for func in PREPROCESSORS:
-                print(f'running {func.__name__}')
-                func(self)
-                print('done.')
+        if os.path.exists(graph_file or ''):
+
+            self.logger.info(f'reading graph from {graph_file}')
+            self.graph = ig.Graph.Read(graph_file)
+
+        else:
+            self.graph = self.create_igraph()
+
+            if PREPROCESSORS:
+                for func in PREPROCESSORS:
+                    self.logger.info(f'running {func.__name__}')
+                    func(self)
+                    self.logger.info('done.')
+
+            if graph_file:
+
+                self.logger.info(f'saving graph to {graph_file}. move or delete this file to rebuild graph')
+                self.graph.write(graph_file)
 
     def check_network_completeness(self):
         """check to see that all nodes have links and nodes for all links have defined attributes
@@ -325,19 +343,14 @@ class Network():
 
         if stray_nodes:
             self.node_df = self.node_df[~self.node_df[self.node_name].isin(list(stray_nodes))]
-            print(f'removed {len(stray_nodes)} stray nodes from network')
+            self.logger.info(f'removed {len(stray_nodes)} stray nodes from network')
 
         if missing_nodes:
             raise Exception(f'missing {len(missing_nodes)} nodes from network: {missing_nodes}')
 
-    def create_igraph(self, graph_file=None):
+    def create_igraph(self):
         """build graph representation of network
         """
-
-        if os.path.exists(graph_file or ''):
-
-            print(f'reading graph from {graph_file}')
-            return ig.Graph.Read(graph_file)
 
         # first two link columns need to be from/to nodes and
         # first node column must be node name.
@@ -350,23 +363,18 @@ class Network():
         link_df = self.link_df[[self.link_from_node, self.link_to_node, *self.link_df.columns]]
         node_df = self.node_df[[self.node_name, *self.node_df.columns]]
 
-        print('building graph... ', end='')
+        self.logger.info('building graph... ')
         graph = ig.Graph.DataFrame(
             edges=link_df,
             vertices=node_df,
             directed=True)
 
-        print('done.')
+        self.logger.info('done.')
 
-        print('adding turns... ', end='')
-        add_turn_edges(graph)
+        self.logger.info('adding turns... ')
+        add_turn_edges(graph, self.node_x_name, self.node_y_name)
 
-        print('done.')
-
-        if graph_file:
-
-            print(f'saving graph to {graph_file}. move or delete this file to rebuild graph')
-            graph.write(graph_file)
+        self.logger.info('done.')
 
         return graph
 
@@ -430,7 +438,7 @@ class Network():
 
         assert len(paths) == len(attributes)
 
-        print(f'loading {len(paths)} paths onto network... ', end='')
+        self.logger.info(f'loading {len(paths)} paths onto network... ')
 
         edges = []
         for p in paths:
@@ -446,7 +454,7 @@ class Network():
 
         self.graph.es[list(edges)][load_name] = list(values)
 
-        print('done.')
+        self.logger.info('done.')
 
     def get_link_attributes(self, link_attrs):
 

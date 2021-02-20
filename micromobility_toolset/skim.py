@@ -63,6 +63,7 @@ class Skim():
 
         if mapping:
 
+            # TODO: logger debug difference between dataframe and mapping
             # only retrieve rows from mapping
             data = data[data.index.isin(mapping, level=0) & data.index.isin(mapping, level=1)]
 

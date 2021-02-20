@@ -80,7 +80,7 @@ def generate_demand(*scenarios):
                 intrazonal + \
                 scenario.trip_settings.get('bike_asc')[segment]
 
-            bike_util = np.logger.info(dest_size + 1) + gen_dist
+            bike_util = np.log(dest_size + 1) + gen_dist
             bike_util = np.exp(bike_util - 999 * (1 - bike_avail))
 
             # destination-choice fraction
