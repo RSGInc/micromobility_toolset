@@ -13,7 +13,6 @@ def assign_demand(*scenarios):
 
     for scenario in scenarios:
 
-        scenario.logger.info("performing calculations")
         total_demand = np.zeros((scenario.num_zones, scenario.num_zones))
 
         for segment in scenario.trip_settings.get('segments'):
