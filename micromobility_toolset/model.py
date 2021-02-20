@@ -380,6 +380,7 @@ class Scenario():
         del net_settings['saved_graph']
 
         net = Network(
+            name=f'{self.name.title()} Network',
             link_file=link_file,
             node_file=node_file,
             saved_graph=saved_graph,
