@@ -1,14 +1,14 @@
 """micromobility_toolset.model
 
 This module collects a list of model "steps" that each process some data from the given
-configuration directories. A Model object manages the five directories that are used to run the
+configuration directories. A Scenario object manages the three directories that are used to run the
 steps. See step().
 
-A Model class instance is created at the start of a run and passed to each step. This way, steps
+A Scenario class instance is created at the start of a run and passed to each step. This way, steps
 can share configuration settings and data with each other. Resources are stored as instance
 attributes and methods, so it is easy to interact with the model when creating new steps.
 
-Most of the model attributes (e.g. network_settings, base_network, zone_df) are only created
+Most of the model attributes (e.g. network_settings, network, zone_df) are only created
 when called for the first time. This prevents the code from loading unecessary data into memory.
 The model also tries to find existing versions of a resource instead of rebuilding it, whenever
 possible. For example, the `base_bike_skim` and all other skim matrices are only pulled from the
@@ -344,6 +344,8 @@ class Scenario():
         with open(file_path) as f:
             settings = yaml.safe_load(f.read())
 
+        self.logger.debug(yaml.dump(settings))
+
         return settings
 
     def logger(self):
@@ -353,12 +355,12 @@ class Scenario():
 
     @cache
     def zone_settings(self):
-        # TODO: dump into logger debug with some nice-ish
-        # formatting along with network and trip settings
+
         return self._read_settings_file('zone.yaml')
 
     @cache
     def network_settings(self):
+
         return self._read_settings_file('network.yaml')
 
     @cache
@@ -426,14 +428,17 @@ class Scenario():
         self.logger.info(f'num zones: {len(self.zone_list)}')
         return len(self.zone_list)
 
-    @cache
-    def reachable_zones(self):
+    def reachable_zones(self, max_dist=None, min_dist=0):
         """tuple of (origin zone indices, destination zone indices) for non-intrazonal
-        zone-to-zone pairs less than mode max dist
+        zone-to-zone pairs less than max_dist and greater than min_dist
         """
-        # TODO: parameterize mode
 
-        return np.nonzero(self.bike_skim)
+        dist_skim = self.distance_skim[self.distance_skim > min_dist]
+
+        if max_dist:
+            dist_skim = dist_skim[dist_skim <= max_dist]
+
+        return np.nonzero(dist_skim)
 
     def load_network_sums(self, attributes, load_name):
         """
@@ -467,7 +472,7 @@ class Scenario():
             path_list = self.network.graph.get_shortest_paths(
                 v=orig_node,
                 to=dest_nodes,
-                weights=self.network_settings.get('weights_bike'),  # see todo
+                weights=cost_attr,
                 output='epath')
 
             for i, path in enumerate(path_list):
@@ -477,26 +482,19 @@ class Scenario():
 
         self.network.graph.es[list(edges)][load_name] = list(values)
 
-    def _read_skim_file(self, file_path, table_name):
+    def _read_skim_file(self, file_path):
 
-        ozone_col = self.network_settings.get('skim_pzone_col')
-        dzone_col = self.network_settings.get('skim_azone_col')
+        ozone_col = self.network_settings.get('skim_ozone_col')
+        dzone_col = self.network_settings.get('skim_dzone_col')
         zones = self.zone_list
 
         file_name = os.path.basename(file_path)
         dir_name = os.path.basename(os.path.dirname(file_path))
 
-        # 3 dimensional matrix with time and distance
         self.logger.info(f'reading {file_name} ...')
         if file_path.endswith('.csv'):
             skim = Skim.from_csv(
                 file_path,
-                ozone_col, dzone_col,
-                mapping=zones)
-
-        elif file_path.endswith('.db'):
-            skim = Skim.from_sqlite(
-                file_path, table_name,
                 ozone_col, dzone_col,
                 mapping=zones)
 
@@ -505,91 +503,78 @@ class Scenario():
 
         return skim
 
-    def _load_skim(self, mode):
-        skim_file = self.network_settings.get(f'{mode}_skim_file')
+    @cache
+    def skims(self):
+        skim_file = self.network_settings.get('skim_file')
 
         file_path = self.data_file_path(skim_file)
 
-        skim_table = self.network_settings.get(f'{mode}_skim_table')
-        ozone_col = self.network_settings.get('skim_pzone_col')
-        dzone_col = self.network_settings.get('skim_azone_col')
+        ozone_col = self.network_settings.get('skim_ozone_col')
+        dzone_col = self.network_settings.get('skim_dzone_col')
+        distance = self.network_settings.get('skim_dist_col', 'distance')
 
         if os.path.exists(file_path):
 
-            matrix = self._read_skim_file(file_path, skim_table).to_numpy()
-            return matrix
+            skims = self._read_skim_file(file_path)
 
-        self.logger.info(f'skimming {mode} skim from network...')
-        matrix = self.network.get_skim_matrix(
-            self.zone_nodes,
-            self.network_settings.get(f'weights_{mode}'),
-            max_cost=self.network_settings.get(f'max_cost_{mode}'))
+        else:
 
-        skim = Skim(matrix,
+            # start with distance skim
+            self.logger.info(f'skimming {distance} skim from network...')
+            matrix = self.network.get_skim_matrix(
+                node_ids=self.zone_nodes,
+                cost_attr=distance)
+
+            ozone_col = self.network_settings.get('skim_ozone_col')
+            dzone_col = self.network_settings.get('skim_dzone_col')
+
+            skims = Skim(
+                matrix,
                 mapping=self.zone_list,
-                orig_col=ozone_col,
-                dest_col=dzone_col,
-                col_names=[self.network_settings.get('skim_distance_col', 'distance')])
+                orig_name=self.network_settings.get('skim_ozone_col'),
+                dest_name=self.network_settings.get('skim_dzone_col'),
+                core_names=[distance])
 
-        if self.network_settings.get(f'save_{mode}_skim', False):
-            self.logger.info(f'saving {mode} skim to {os.path.basename(os.path.dirname(file_path))}...')
-            skim.to_csv(file_path)
+        modified = False
+        weights = list(set(self.network_settings.get('skim_weights', []).append(distance)))
 
-        return skim.to_numpy()
+        for cost_attr in weights:
+            if cost_attr not in skims.core_names:
 
-    @cache
-    def auto_skim(self):
+                modified = True
 
-        file_name = self.network_settings.get('auto_skim_file')
-        table_name = self.network_settings.get('auto_skim_table')
-        file_path = self.data_file_path(file_name)
+                self.logger.info(f'skimming {cost_attr} skim from network...')
+                matrix = self.network.get_skim_matrix(
+                    node_ids=self.zone_nodes,
+                    cost_attr=cost_attr)
 
-        return self._read_skim_file(file_path, table_name).to_numpy()
+                skims.add_core(matrix, cost_attr)
 
-    @cache
-    def walk_skim(self):
-        return self._load_skim('walk')
+            else:
 
-    @cache
-    def bike_skim(self):
-        return self._load_skim('bike')
+                self.logger.info(f'using {cost_attr} from {skim_file}')
 
-    @cache
-    def motorized_mode_indices(self):
+        if modified:
 
-        all_modes = self.trip_settings.get('modes')
-        motorized_modes = self.trip_settings.get('motorized_modes')
+            self.logger.info(f'saving skims to {file_path}...')
+            skims.to_csv(file_path)
 
-        return [all_modes.index(mode) for mode in motorized_modes]
+        return skims
 
     @cache
-    def bike_mode_indices(self):
+    def distance_skim(self):
 
-        all_modes = self.trip_settings.get('modes')
-        bike_modes = self.trip_settings.get('bike_modes')
+        dist_col = self.network_settings.get('skim_dist_col', 'distance')
 
-        return [all_modes.index(mode) for mode in bike_modes]
+        return self.skims.get_core(dist_col)
 
-    @cache
-    def walk_mode_indices(self):
-
-        all_modes = self.trip_settings.get('modes')
-        walk_modes = self.trip_settings.get('walk_modes')
-
-        return [all_modes.index(mode) for mode in walk_modes]
-
-    def _read_zone_matrix(self, file_name, table_name=None):
+    def _read_zone_matrix(self, file_name):
 
         pzone_col = self.trip_settings.get('trip_pzone_col')
         azone_col = self.trip_settings.get('trip_azone_col')
 
         if file_name.endswith('.csv'):
             skim = Skim.from_csv(file_name, pzone_col, azone_col, mapping=self.zone_list)
-
-        elif file_name.endswith('.db'):
-            skim = Skim.from_sqlite(file_name, table_name,
-                                pzone_col, azone_col,
-                                mapping=self.zone_list)
 
         else:
             raise TypeError(f'cannot read matrix from filetype {os.path.basename(file_name)}')
@@ -606,18 +591,14 @@ class Scenario():
 
         csv_file = self.trip_settings.get('trip_files').get(segment)
 
-        # use CSVs for input if no sqlite db provided
-        table_file = self.trip_settings.get('input_sqlite_db', csv_file)
-        table_name = self.trip_settings.get('trip_tables', {}).get(segment)
-
         if segment in self._tables:
             self.logger.debug(f'returning cached {segment} trip matrix')
             return self._tables.get(segment)
 
-        file_path = self.data_file_path(table_file)
+        file_path = self.data_file_path(csv_file)
 
         self.logger.debug(f'reading {segment} trip matrix from {file_path}')
-        return self._read_zone_matrix(file_path, table_name=table_name)
+        return self._read_zone_matrix(file_path)
 
     def save_trip_matrix(self, matrix, segment):
 
@@ -626,15 +607,15 @@ class Scenario():
         self.logger.debug(f'caching {segment} trip matrix')
         self._tables[segment] = matrix
 
-        col_names = self.trip_settings.get('modes')
-        self.write_zone_matrix(matrix, table_file, col_names)
+        # TODO: write all trips to same file
+        self.write_zone_matrix(matrix, table_file, ['trips'])
 
     def write_zone_matrix(self, matrix, filename, col_names):
 
         skim = Skim(matrix,
                 mapping=self.zone_list,
-                orig_col=self.trip_settings.get('trip_pzone_col'),
-                dest_col=self.trip_settings.get('trip_azone_col'),
+                orig_name=self.trip_settings.get('trip_pzone_col'),
+                dest_name=self.trip_settings.get('trip_azone_col'),
                 col_names=col_names)
 
         filepath = self.data_file_path(filename)

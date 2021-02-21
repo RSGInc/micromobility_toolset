@@ -387,10 +387,12 @@ class Network():
         return graph
 
 
-    def get_skim_matrix(self, node_ids, weights, max_cost=None):
+    def get_skim_matrix(self, node_ids, cost_attr, max_cost=None):
         """skim network net starting from node_id to node_id, using specified
         edge weights. Zero-out entries above max_cost, return matrix
         """
+
+        assert cost_attr in self.graph.edge_attributes()
 
         # remove duplicate node_ids
         nodes_uniq = list(set(list(map(float, node_ids))))
@@ -398,14 +400,22 @@ class Network():
         vertex_names = np.array(self.graph.vs['name'], dtype=np.float)
         vertex_ids = np.searchsorted(vertex_names, nodes_uniq)
 
-        dists = self.graph.shortest_paths(
+        weights = np.array(self.graph.es[cost_attr], dtype=np.float)
+
+        nans = np.count_nonzero(np.isnan(weights))
+        if nans > 0:
+            self.logger.debug(f"edge attribute '{weights}' contains {nans} NaNs. replacing with zeros.")
+            weights = np.nan_to_num(weights)
+            self.graph.es[cost_attr] = list(weights)
+
+        costs = self.graph.shortest_paths(
             source=vertex_ids,
             target=vertex_ids,
-            weights=weights)
+            weights=cost_attr)
 
         # expand skim to match original node_ids
         node_map = [nodes_uniq.index(int(n)) for n in node_ids]
-        skim_matrix = np.array(dists)[:, node_map][node_map, :]
+        skim_matrix = np.array(costs)[:, node_map][node_map, :]
 
         if max_cost:
             skim_matrix[skim_matrix > max_cost] = 0
