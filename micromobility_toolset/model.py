@@ -437,16 +437,18 @@ class Scenario():
 
         self.logger.info(f'calculating network paths for {len(self.reachable_zones[0])} zone pairs... ')
 
-        zone_nodes = np.array(self.zone_nodes).astype(int)
-        zone_array = np.array(self.zone_list).astype(int)
+        zone_nodes = np.array(self.zone_nodes).astype(float)
+        graph_nodes = np.searchsorted(
+            np.array(self.network.graph.vs['name'], dtype=np.float),
+            zone_nodes)
 
         paths = []
         for orig_idx in range(len(zone_nodes)):
 
             # skim indices of reachable destination zones
             dest_idxs = self.reachable_zones[1][np.where(self.reachable_zones[0]==orig_idx)[0]]
-            orig_node = zone_nodes[orig_idx]  # note: zone_nodes have the same index as skim levels
-            dest_nodes = zone_nodes[dest_idxs]
+            orig_node = graph_nodes[orig_idx]  # note: zone_nodes have the same index as skim levels
+            dest_nodes = graph_nodes[dest_idxs]
 
             # one-to-many shortest path search.
             # returns nested list of edge ids
