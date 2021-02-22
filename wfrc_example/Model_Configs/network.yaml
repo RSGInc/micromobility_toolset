@@ -1,0 +1,54 @@
+link_file: links.csv
+link_name: link_id
+from_name: from_node
+to_name: to_node
+
+link_attributes_by_direction:
+    distance:
+        - Length_Miles
+        - Length_Miles
+    traffic_signal:
+        - Signal
+        - Signal
+    slope:
+        - Slope_AB
+        - Slope_BA
+    bike_boulevard:
+        - Bike_Blvd
+        - Bike_Blvd
+    bike_path:
+        - Bike_Path
+        - Bike_Path
+    bike_lane:
+        - Bike_Lane
+        - Bike_Lane
+    AADT:
+        - AADT
+        - AADT
+
+node_file: nodes.csv
+node_name: node_id
+
+node_attributes:
+    xcoord: xcoord
+    ycoord: ycoord
+
+node_x_name: xcoord
+node_y_name: ycoord
+
+saved_graph: utah.pickle
+
+# edge weights for path finding
+weights_bike: bike_cost
+
+# maximum cost after which skimming is halted
+max_cost_bike: 7.5
+
+# output file names
+bike_skim_file: bike_skim.csv
+
+skim_azone_col: i
+skim_pzone_col: j
+
+save_bike_skim: True
+
