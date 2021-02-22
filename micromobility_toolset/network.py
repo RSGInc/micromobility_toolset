@@ -347,8 +347,16 @@ class Network():
 
         self.node_df[self.node_name] = self.node_df[self.node_name].astype(str)
 
-        link_df = self.link_df[[self.link_from_node, self.link_to_node, *self.link_df.columns]]
-        node_df = self.node_df[[self.node_name, *self.node_df.columns]]
+        link_cols = list(self.link_df.columns)
+        link_cols.insert(0, self.link_to_node)
+        link_cols.insert(0, self.link_from_node)
+
+        node_cols = list(self.node_df.columns)
+        node_cols.remove(self.node_name)
+        node_cols.insert(0, self.node_name)
+
+        link_df = self.link_df[link_cols]
+        node_df = self.node_df[node_cols]
 
         print('building graph... ', end='')
         graph = ig.Graph.DataFrame(
@@ -377,11 +385,14 @@ class Network():
         """
 
         # remove duplicate node_ids
-        nodes_uniq = list(set(list(map(int, node_ids))))
+        nodes_uniq = list(set(list(map(float, node_ids))))
+
+        vertex_names = np.array(self.graph.vs['name'], dtype=np.float)
+        vertex_ids = np.searchsorted(vertex_names, nodes_uniq)
 
         dists = self.graph.shortest_paths(
-            source=nodes_uniq,
-            target=nodes_uniq,
+            source=vertex_ids,
+            target=vertex_ids,
             weights=weights)
 
         # expand skim to match original node_ids
