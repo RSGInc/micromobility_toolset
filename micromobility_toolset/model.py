@@ -433,12 +433,13 @@ class Scenario():
         zone-to-zone pairs less than max_dist and greater than min_dist
         """
 
-        dist_skim = self.distance_skim[self.distance_skim > min_dist]
+        dist_skim = self.distance_skim
+        dist_skim[dist_skim < min_dist] = 0
 
         if max_dist:
-            dist_skim = dist_skim[dist_skim <= max_dist]
+            dist_skim[dist_skim > max_dist] = 0
 
-        return np.nonzero(dist_skim)
+        return np.nonzero(dist_skim + np.diag(np.ones(self.num_zones)))
 
     def load_network_sums(self, attributes, load_name):
         """
@@ -448,7 +449,10 @@ class Scenario():
         - move method to Network
         """
 
-        self.logger.info(f'calculating network paths for {len(self.reachable_zones[0])} zone pairs... ')
+        reachable_zones = self.reachable_zones(max_dist=max_dist, min_dist=min_dist)
+        self.logger.info(
+            f'calculating {cost_attr} network paths for '
+            f'{len(reachable_zones[0])} zone pairs...')
 
         zone_nodes = np.array(self.zone_nodes).astype(float)
         graph_nodes = np.searchsorted(
@@ -463,7 +467,7 @@ class Scenario():
         for orig_idx in np.unique(reachable_zones[0]):
 
             # skim indices of reachable destination zones
-            dest_idxs = self.reachable_zones[1][np.where(self.reachable_zones[0]==orig_idx)[0]]
+            dest_idxs = reachable_zones[1][np.where(reachable_zones[0]==orig_idx)[0]]
             orig_node = graph_nodes[orig_idx]  # note: zone_nodes have the same index as skim levels
             dest_nodes = graph_nodes[dest_idxs]
 
@@ -511,7 +515,8 @@ class Scenario():
 
         ozone_col = self.network_settings.get('skim_ozone_col')
         dzone_col = self.network_settings.get('skim_dzone_col')
-        distance = self.network_settings.get('skim_dist_col', 'distance')
+        distance_col = self.network_settings.get('skim_dist_col', 'distance')
+        max_cost = self.network_settings.get('skim_max_cost')
 
         if os.path.exists(file_path):
 
@@ -520,10 +525,11 @@ class Scenario():
         else:
 
             # start with distance skim
-            self.logger.info(f'skimming {distance} skim from network...')
+            self.logger.info(f'skimming {distance_col} skim from network...')
             matrix = self.network.get_skim_matrix(
                 node_ids=self.zone_nodes,
-                cost_attr=distance)
+                cost_attr=distance_col,
+                max_cost=max_cost)
 
             ozone_col = self.network_settings.get('skim_ozone_col')
             dzone_col = self.network_settings.get('skim_dzone_col')
@@ -533,10 +539,10 @@ class Scenario():
                 mapping=self.zone_list,
                 orig_name=self.network_settings.get('skim_ozone_col'),
                 dest_name=self.network_settings.get('skim_dzone_col'),
-                core_names=[distance])
+                core_names=[distance_col])
 
         modified = False
-        weights = list(set(self.network_settings.get('skim_weights', []) + [distance]))
+        weights = list(set(self.network_settings.get('skim_weights', []) + [distance_col]))
 
         for cost_attr in weights:
             if cost_attr not in skims.core_names:
@@ -546,7 +552,8 @@ class Scenario():
                 self.logger.info(f'skimming {cost_attr} skim from network...')
                 matrix = self.network.get_skim_matrix(
                     node_ids=self.zone_nodes,
-                    cost_attr=cost_attr)
+                    cost_attr=cost_attr,
+                    max_cost=max_cost)
 
                 skims.add_core(matrix, cost_attr)
 
@@ -579,7 +586,7 @@ class Scenario():
         else:
             raise TypeError(f'cannot read matrix from filetype {os.path.basename(file_name)}')
 
-        return skim.to_numpy()
+        return skim.to_numpy().reshape((self.num_zones, self.num_zones))
 
     def load_util_matrix(self, segment):
 
@@ -616,7 +623,7 @@ class Scenario():
                 mapping=self.zone_list,
                 orig_name=self.trip_settings.get('trip_pzone_col'),
                 dest_name=self.trip_settings.get('trip_azone_col'),
-                col_names=col_names)
+                core_names=col_names)
 
         filepath = self.data_file_path(filename)
         self.logger.debug(f'writing matrix with shape {matrix.shape} and headers {col_names} to {filename}')

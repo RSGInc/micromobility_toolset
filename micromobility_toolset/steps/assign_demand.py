@@ -23,9 +23,9 @@ def assign_demand(*scenarios):
 
                 nhb_trips = scenario.load_trip_matrix(f'{segment}_nhb')
                 bike_trips += nhb_trips
-
-            if np.ndim(bike_trips) > 2:
-                bike_trips = np.sum(np.take(bike_trips, scenario.bike_mode_indices, axis=2), 2)
+            
+            # if np.ndim(bike_trips) > 2:
+            #     bike_trips = np.sum(np.take(bike_trips, scenario.bike_mode_indices, axis=2), 2)
 
             scenario.logger.info(f'{segment} trips: {round(np.sum(bike_trips), 2)}')
 
@@ -45,3 +45,4 @@ def assign_demand(*scenarios):
         scenario.logger.info("writing results to bike_vol.csv...")
         link_df['bike_vol'].to_csv(scenario.data_file_path('bike_vol.csv'))
         scenario.logger.info('done.')
+
