@@ -536,7 +536,7 @@ class Scenario():
                 core_names=[distance])
 
         modified = False
-        weights = list(set(self.network_settings.get('skim_weights', []).append(distance)))
+        weights = list(set(self.network_settings.get('skim_weights', []) + [distance]))
 
         for cost_attr in weights:
             if cost_attr not in skims.core_names:

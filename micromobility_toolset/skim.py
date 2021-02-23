@@ -34,15 +34,7 @@ class Skim():
         core_names: list of str, names for higher dimensions
         """
 
-        if not data.ndim in [2, 3]:
-            raise IndexError(f'input matrix must be 2 or 3 dimensions, not {data.ndim}')
-
-        if not data.shape[0] == data.shape[1]:
-            raise IndexError(f'matrix dimensions 1 and 2 do not match: {data.shape}')
-
-        self._matrix = data
-        self._length = data.shape[0]
-
+        self._set_matrix(data)
         self._set_mapping(mapping)
         self._set_num_cores()
         self._set_index(orig_name, dest_name)
@@ -84,7 +76,6 @@ class Skim():
         else:
             core_names = list(data.columns)
 
-        # FIX: use data.ndim here
         if data.shape[1] > 1:
             dim = (matrix_length, matrix_length, data.shape[1])
         else:
@@ -101,19 +92,30 @@ class Skim():
         o_mask = np.searchsorted(mapping, o_vals)
         d_mask = np.searchsorted(mapping, d_vals)
 
-        # FIX: use data.ndim here
         if data.shape[1] > 1:
             np_matrix[o_mask, d_mask, :] = data.iloc[:, 0:].to_numpy()
         else:
             np_matrix[o_mask, d_mask] = data.iloc[:, 0].to_numpy()
 
-        self._matrix = np_matrix
-        self._length = matrix_length
-
+        self._set_matrix(np_matrix)
         self._set_mapping(mapping)
         self._set_num_cores()
         self._set_index(orig_name, dest_name)
         self._set_core_names(core_names)
+
+    def _set_matrix(self, data):
+        if not data.ndim in [2, 3]:
+            raise IndexError(f'input matrix must be 2 or 3 dimensions, not {data.ndim}')
+
+        if not data.shape[0] == data.shape[1]:
+            raise IndexError(f'matrix dimensions 1 and 2 do not match: {data.shape}')
+
+        length = data.shape[0]
+        if data.ndim == 2:
+            data = data.reshape(length, length, 1)
+
+        self._matrix = data
+        self._length = length
 
     def _set_mapping(self, mapping):
 
@@ -186,11 +188,12 @@ class Skim():
             or matrix.shape == (self._length, self.length, 1)
 
         matrix = matrix.reshape((self._length, self._length, 1))
-        self._matrix = np.concatenate((self._matrix, matrix), axis=2) 
+        new_matrix = np.concatenate((self._matrix, matrix), axis=2) 
 
+        self._set_matrix(new_matrix)
         self._set_num_cores()
-        core_names = self._core_names.append(name)
-        self.set_core_names(core_names)
+        core_names = self._core_names + [name]
+        self._set_core_names(core_names)
 
     def to_numpy(self):
 
