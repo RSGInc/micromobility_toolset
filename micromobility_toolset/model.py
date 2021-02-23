@@ -344,7 +344,7 @@ class Scenario():
         with open(file_path) as f:
             settings = yaml.safe_load(f.read())
 
-        self.logger.debug(yaml.dump(settings))
+        self.logger.debug(f'\n{yaml.dump(settings)}')
 
         return settings
 
