@@ -71,7 +71,7 @@ def step():
     This will simply add the decorated function to this module's STEPS dictionary when the
     function is imported.
     """
-    
+
     def decorator(func):
         name = func.__name__
 
@@ -328,7 +328,7 @@ class Scenario():
                 del self._cache[name]
 
             else:
-                self.logger.debug(f"'del {name}' was called but '{name}' is not in cache") 
+                self.logger.debug(f"'del {name}' was called but '{name}' is not in cache")
 
         return property(get_prop, set_prop, del_prop)
 
@@ -394,7 +394,7 @@ class Scenario():
         self.logger.debug(f'reading zones from {file_path}')
 
         zone_df = _read_dataframe(
-            file_path, 
+            file_path,
             zone_col,
             table_name=zone_table)
 
@@ -429,11 +429,8 @@ class Scenario():
 
         return np.nonzero(self.bike_skim)
 
-    @cache
-    def zone_paths(self) :
-        """nested dictionary of paths (lists of edge/link ids) between reachable zones.
-        """
-        # TODO: parameterize mode
+    def load_network_sums(self, attributes, load_name):
+
 
         self.logger.info(f'calculating network paths for {len(self.reachable_zones[0])} zone pairs... ')
 
@@ -442,8 +439,12 @@ class Scenario():
             np.array(self.network.graph.vs['name'], dtype=np.float),
             zone_nodes)
 
-        paths = []
-        for orig_idx in range(len(zone_nodes)):
+        self.network.graph.es[load_name] = 0
+        edges = np.array(self.network.graph.es.indices)
+        values = np.zeros(len(edges))
+
+        reachable_zones = self.reachable_zones
+        for orig_idx in np.unique(reachable_zones[0]):
 
             # skim indices of reachable destination zones
             dest_idxs = self.reachable_zones[1][np.where(self.reachable_zones[0]==orig_idx)[0]]
@@ -458,10 +459,12 @@ class Scenario():
                 weights=self.network_settings.get('weights_bike'),  # see todo
                 output='epath')
 
-            paths.extend(path_list)
+            for i, path in enumerate(path_list):
 
-        self.logger.info('done.')
-        return paths
+                edge_idxs = np.searchsorted(edges, path)
+                values[edge_idxs] += attributes[orig_idx, dest_idxs[i]]
+
+        self.network.graph.es[list(edges)][load_name] = list(values)
 
     def _read_skim_file(self, file_path, table_name):
 

@@ -450,14 +450,11 @@ class Network():
         assert len(paths) == len(attributes)
 
         self.logger.info(f'loading {len(paths)} paths onto network... ')
+        self.graph.es[load_name] = 0
 
-        edges = []
-        for p in paths:
-            edges.extend(p)
-
-        edges = np.unique(edges)
-
+        edges = np.unique(paths[paths >= 0])
         values = np.zeros(len(edges))
+
         for i, path in enumerate(paths):
 
             idxs = np.searchsorted(edges, path)
