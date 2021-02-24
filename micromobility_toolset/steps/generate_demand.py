@@ -107,9 +107,7 @@ def distribute_trips(scenario, segment, orig_trips, dest_size, dest_avail):
 
     scenario.logger.info(f'{segment} home-based trips: {int(np.sum(bike_trips))}')
 
-    trips = bike_trips.reshape((scenario.num_zones, scenario.num_zones, 1))
-
-    scenario.save_trip_matrix(trips, segment)
+    scenario.save_trip_matrix(bike_trips, segment)
 
     # non-home-based trips
     nhb_factor = scenario.trip_settings.get('nhb_factor').get(segment)
@@ -119,6 +117,4 @@ def distribute_trips(scenario, segment, orig_trips, dest_size, dest_avail):
 
         scenario.logger.info(f'{segment} non-home-based trips: {int(np.sum(nhb_bike_trips))}')
 
-        nhb_trips = nhb_bike_trips.reshape((scenario.num_zones, scenario.num_zones, 1))
-
-        scenario.save_trip_matrix(nhb_trips, f'{segment}_nhb')
+        scenario.save_trip_matrix(nhb_bike_trips, f'{segment}_nhb')

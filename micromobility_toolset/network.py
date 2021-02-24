@@ -404,7 +404,7 @@ class Network():
 
         nans = np.count_nonzero(np.isnan(weights))
         if nans > 0:
-            self.logger.debug(f"edge attribute '{weights}' contains {nans} NaNs. replacing with zeros.")
+            self.logger.debug(f"edge attribute '{cost_attr}' contains {nans} NaNs. replacing with zeros.")
             weights = np.nan_to_num(weights)
             self.graph.es[cost_attr] = list(weights)
 

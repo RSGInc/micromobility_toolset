@@ -18,12 +18,13 @@ def assign_demand(*scenarios):
         for segment in scenario.trip_settings.get('segments'):
 
             bike_trips = scenario.load_trip_matrix(segment)
+            assert bike_trips.ndim == 2, f"bike trips have shape {bike_trips.shape}"
 
             if f'{segment}_nhb' in scenario.trip_settings.get('trip_files'):
 
                 nhb_trips = scenario.load_trip_matrix(f'{segment}_nhb')
                 bike_trips += nhb_trips
-            
+
             # if np.ndim(bike_trips) > 2:
             #     bike_trips = np.sum(np.take(bike_trips, scenario.bike_mode_indices, axis=2), 2)
 
@@ -45,4 +46,3 @@ def assign_demand(*scenarios):
         scenario.logger.info("writing results to bike_vol.csv...")
         link_df['bike_vol'].to_csv(scenario.data_file_path('bike_vol.csv'))
         scenario.logger.info('done.')
-
