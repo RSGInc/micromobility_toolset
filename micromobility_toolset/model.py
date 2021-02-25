@@ -430,7 +430,12 @@ class Scenario():
         return np.nonzero(self.bike_skim)
 
     def load_network_sums(self, attributes, load_name):
-
+        """
+        TODO:
+        - add docstring
+        - better comments
+        - move method to Network
+        """
 
         self.logger.info(f'calculating network paths for {len(self.reachable_zones[0])} zone pairs... ')
 

@@ -439,31 +439,6 @@ class Network():
 
         return nearby_pois
 
-    def load_path_attributes(self, paths, attributes, load_name):
-        """
-        Sum attribute values over a list of paths (edge ids)
-
-        Adds new edge attribute to all graph edges and sums up the cumulative
-        attribute value for each intermediate link.
-        """
-
-        assert len(paths) == len(attributes)
-
-        self.logger.info(f'loading {len(paths)} paths onto network... ')
-        self.graph.es[load_name] = 0
-
-        edges = np.unique(paths[paths >= 0])
-        values = np.zeros(len(edges))
-
-        for i, path in enumerate(paths):
-
-            idxs = np.searchsorted(edges, path)
-            values[idxs] += attributes[i]
-
-        self.graph.es[list(edges)][load_name] = list(values)
-
-        self.logger.info('done.')
-
     def get_link_attributes(self, link_attrs):
 
         if not isinstance(link_attrs, list):
