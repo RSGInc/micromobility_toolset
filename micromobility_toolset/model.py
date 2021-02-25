@@ -60,8 +60,8 @@ def config_logger():
     logging.captureWarnings(True)
     logging.basicConfig(
         level=logging.DEBUG,
-        handlers=[ch, fh],
-        force=True)
+        handlers=[ch, fh])
+        # force=True)
 
 
 def step():
