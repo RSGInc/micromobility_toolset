@@ -15,9 +15,8 @@ def generate_demand(*scenarios):
 
     for scenario in scenarios:
 
-        dest_avail = (scenario.distance_skim > 0)
         buffer_dist = scenario.zone_settings.get('buffer_dist')
-        zone_buffer = dest_avail * (1 / (1 + np.exp(4 * (scenario.distance_skim - buffer_dist/2))))
+        zone_buffer = (1 / (1 + np.exp(4 * (scenario.distance_skim - buffer_dist/2))))
 
         # initialize dataframes
         buffered_zones = pd.DataFrame(index=scenario.zone_list)
@@ -47,7 +46,7 @@ def generate_demand(*scenarios):
             # save segment values to attraction df
             dest_size_df[segment] = dest_size
 
-            distribute_trips(scenario, segment, orig_trips, dest_size, dest_avail)
+            distribute_trips(scenario, segment, orig_trips, dest_size)
 
 
         # finally, save intermediate calculations to disk
@@ -82,16 +81,23 @@ def create_trips(scenario, segment, buffered_zones):
     return orig_trips
 
 
-def distribute_trips(scenario, segment, orig_trips, dest_size, dest_avail):
+def distribute_trips(scenario, segment, orig_trips, dest_size):
+
+    max_dist = scenario.trip_settings.get('trip_max_dist')[segment]
+    dest_avail = (
+        (scenario.distance_skim > 0)
+        * (scenario.distance_skim < max_dist)
+        + np.diag(np.ones(scenario.num_zones))
+    )
 
     intrazonal = \
         np.diag(
             np.ones(scenario.num_zones) * \
             scenario.trip_settings.get('bike_intrazonal')[segment])
 
-    # TODO: parameterize
+    cost_attr = scenario.trip_settings.get('trip_cost_attr')[segment]
     gen_cost = \
-        scenario.skims.get_core('bike_cost') + \
+        scenario.skims.get_core(cost_attr) + \
         intrazonal + \
         scenario.trip_settings.get('bike_asc')[segment]
 

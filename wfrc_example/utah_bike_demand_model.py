@@ -22,7 +22,6 @@ to the 'input' folder and reused for subsequent runs.
 
 
 import argparse
-import numpy as np
 
 from micromobility_toolset import model
 from micromobility_toolset.network import preprocessor
