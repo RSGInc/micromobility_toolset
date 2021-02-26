@@ -321,12 +321,15 @@ class Network:
             if graph_file:
 
                 self.logger.info(
-                    f"saving graph to {graph_file}. move or delete this file to rebuild graph"
+                    f"saving graph to {graph_file}. "
+                    f"move or delete this file to rebuild graph"
                 )
                 self._graph.write(graph_file)
 
     def check_network_completeness(self):
-        """check to see that all nodes have links and nodes for all links have defined attributes"""
+        """check to see that all nodes have links and nodes for all links have defined
+        attributes
+        """
 
         node_nodes = set(list(self.node_df[self.node_name]))
         link_nodes = set(

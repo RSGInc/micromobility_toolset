@@ -1,28 +1,31 @@
 """micromobility_toolset.model
 
 This module collects a list of model "steps" that each process some data from the given
-configuration directories. A Scenario object manages the three directories that are used to run the
-steps. See step().
+configuration directories. A Scenario object manages the three directories that are
+used to run the steps. See step().
 
-A Scenario class instance is created at the start of a run and passed to each step. This way, steps
-can share configuration settings and data with each other. Resources are stored as instance
-attributes and methods, so it is easy to interact with the model when creating new steps.
+A Scenario class instance is created at the start of a run and passed to each step.
+This way, steps can share configuration settings and data with each other. Resources
+are stored as instance attributes and methods, so it is easy to interact with the model
+when creating new steps.
 
 Most of the model attributes (e.g. network_settings, network, zone_df) are only created
-when called for the first time. This prevents the code from loading unecessary data into memory.
-The model also tries to find existing versions of a resource instead of rebuilding it, whenever
-possible. For example, the `base_bike_skim` and all other skim matrices are only pulled from the
-network if a skim file is not found on disk.
+when called for the first time. This prevents the code from loading unecessary data
+into memory. The model also tries to find existing versions of a resource instead of
+rebuilding it, whenever possible. For example, the `base_bike_skim` and all other skim
+matrices are only pulled from the network if a skim file is not found on disk.
 
-The model also saves most commonly used resources (settings, networks, DataFrames) in a cache.
-When a resource is requested, the cached version will be returned if it has been used before.
+The model also saves most commonly used resources (settings, networks, DataFrames) in a
+cache. When a resource is requested, the cached version will be returned if it has been
+used before.
 
-This means that when a resource is used in a step, the model will first look in the cache, then it
-will look for it on disk, then finally will recalculate it as a last resort. If a series of steps
-is run at once (via run([list, of, steps])), they will all share the same in-memory resources. If
-they are run in separate python processes, they will need to reload/rebuild the data every time.
+This means that when a resource is used in a step, the model will first look in the
+cache, then it will look for it on disk, then finally will recalculate it as a last
+resort. If a series of steps is run at once (via run([list, of, steps])), they will all
+share the same in-memory resources. If they are run in separate python processes, they
+will need to reload/rebuild the data every time.
 
-See ambag_bike_model.py for a usage example.
+See utah_bike_demand_model.py for a usage example.
 
 """
 
@@ -68,8 +71,8 @@ def step():
     """
     Wrap each model step with the @step decorator.
 
-    This will simply add the decorated function to this module's STEPS dictionary when the
-    function is imported.
+    This will simply add the decorated function to this module's STEPS dictionary when
+    the function is imported.
     """
 
     def decorator(func):
@@ -196,8 +199,8 @@ class Scenario:
 
         Cached resources can be treated as normal instance attributes:
 
-            `del resource` will remove it from the cache, causing its setter function to be
-            called next time it is requested.
+            `del resource` will remove it from the cache, causing its setter function
+            to be called next time it is requested.
 
             resource = new_object will replace the cached attribute with new_object
         """
@@ -515,6 +518,7 @@ class Scenario:
 
         filepath = self.data_file_path(filename)
         self.logger.debug(
-            f"writing matrix with shape {matrix.shape} and headers {col_names} to {filename}"
+            f"writing matrix with shape {matrix.shape} "
+            f"and headers {col_names} to {filename}"
         )
         skim.to_csv(filepath)

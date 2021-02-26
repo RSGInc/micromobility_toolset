@@ -54,7 +54,8 @@ def incremental_demand(base_scenario, build_scenario):
         base_bike_util = bike_avail * base_bike_util - 999 * (1 - bike_avail)
         build_bike_util = bike_avail * build_bike_util - 999 * (1 - bike_avail)
 
-        # split full trip matrix and sum up into motorized, nonmotorized, walk, bike, and total
+        # split full trip matrix and sum up into motorized,
+        # nonmotorized, walk, bike, and total
         motorized_trips = np.sum(np.take(base_trips, midxs, axis=2), 2)
         bike_trips = np.sum(np.take(base_trips, bidxs, axis=2), 2)
         walk_trips = np.sum(np.take(base_trips, widxs, axis=2), 2)

@@ -25,9 +25,6 @@ def assign_demand(*scenarios):
                 nhb_trips = scenario.load_trip_matrix(f"{segment}_nhb")
                 bike_trips += nhb_trips
 
-            # if np.ndim(bike_trips) > 2:
-            #     bike_trips = np.sum(np.take(bike_trips, scenario.bike_mode_indices, axis=2), 2)
-
             scenario.logger.info(f"{segment} trips: {round(np.sum(bike_trips), 2)}")
 
             total_demand = total_demand + bike_trips
