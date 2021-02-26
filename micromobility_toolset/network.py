@@ -117,7 +117,7 @@ def add_turn_edges(graph, node_x_name, node_y_name):
     - cross_aadt, float: max AADT at the intersection
     """
 
-    # graph.es['turn'] = False  # default value
+    graph.es['turn'] = False  # default value
 
     idxs = list(np.where(np.array(graph.outdegree()) > 2)[0])
     intersections = list(graph.vs[idxs])
@@ -312,10 +312,10 @@ class Network():
         if os.path.exists(graph_file or ''):
 
             self.logger.info(f'reading graph from {graph_file}')
-            self.graph = ig.Graph.Read(graph_file)
+            self._graph = ig.Graph.Read(graph_file)
 
         else:
-            self.graph = self.create_igraph()
+            self._graph = self.create_igraph()
 
             if PREPROCESSORS:
                 for func in PREPROCESSORS:
@@ -326,7 +326,7 @@ class Network():
             if graph_file:
 
                 self.logger.info(f'saving graph to {graph_file}. move or delete this file to rebuild graph')
-                self.graph.write(graph_file)
+                self._graph.write(graph_file)
 
     def check_network_completeness(self):
         """check to see that all nodes have links and nodes for all links have defined attributes
@@ -386,29 +386,51 @@ class Network():
 
         return graph
 
+    def get_edge_values(self, attr, dtype=None):
+
+        if attr not in self._graph.edge_attributes():
+            raise KeyError(f"{attr} is not an edge attribute")
+
+        weights = np.array(self._graph.es[attr])
+
+        nones = np.count_nonzero(weights == None)  # noqa
+
+        if nones > 0:
+            self.logger.debug(
+                f"edge attribute {attr} contains {nones} missing values. "
+                "replacing with NaNs.")
+
+            weights[weights == None] = np.nan  # noqa
+
+        return weights.astype(dtype)
+
+
+    def set_edge_values(self, attr, weights):
+
+        if isinstance(weights, list) or isinstance(weights, np.ndarray):
+
+            assert len(weights) == self._graph.ecount()
+
+            self._graph.es[attr] = list(weights)
+            return
+
+        self._graph.es[attr] = weights
 
     def get_skim_matrix(self, node_ids, cost_attr, max_cost=None):
         """skim network net starting from node_id to node_id, using specified
         edge weights. Zero-out entries above max_cost, return matrix
         """
 
-        assert cost_attr in self.graph.edge_attributes()
+        weights = self.get_edge_values(cost_attr, dtype=np.float)
+        self.set_edge_values(cost_attr, np.nan_to_num(weights))
 
         # remove duplicate node_ids
         nodes_uniq = list(set(list(map(float, node_ids))))
 
-        vertex_names = np.array(self.graph.vs['name'], dtype=np.float)
+        vertex_names = np.array(self._graph.vs['name'], dtype=np.float)
         vertex_ids = np.searchsorted(vertex_names, nodes_uniq)
 
-        weights = np.array(self.graph.es[cost_attr], dtype=np.float)
-
-        nans = np.count_nonzero(np.isnan(weights))
-        if nans > 0:
-            self.logger.debug(f"edge attribute '{cost_attr}' contains {nans} NaNs. replacing with zeros.")
-            weights = np.nan_to_num(weights)
-            self.graph.es[cost_attr] = list(weights)
-
-        costs = self.graph.shortest_paths(
+        costs = self._graph.shortest_paths(
             source=vertex_ids,
             target=vertex_ids,
             weights=cost_attr)
@@ -422,33 +444,6 @@ class Network():
 
         return skim_matrix
 
-    # TODO: update this to igraph
-    def get_nearby_pois(self, poi_ids, source_ids, weights, max_cost=None):
-        """
-        Gets list of nearby nodes for each source node.
-
-        poi_ids: point-of-interest node ids to include in output values
-        source_ids: output dictionary keys
-
-        """
-
-        nearby_pois = {}
-        poi_set = set(poi_ids)
-
-        for source in source_ids:
-            paths = self.single_source_dijkstra(
-                source,
-                varcoef,
-                max_cost=max_cost)[1]
-
-            nearby_nodes = []
-            for nodes in paths.values():
-                nearby_nodes.extend(nodes)
-
-            nearby_pois[source] = list(set(nearby_nodes) & poi_set)
-
-        return nearby_pois
-
     def get_link_attributes(self, link_attrs):
 
         if not isinstance(link_attrs, list):
@@ -457,11 +452,11 @@ class Network():
         # add new column to link_df
 
         data = {
-            self.link_from_node: self.graph.es[self.link_from_node],
-            self.link_to_node: self.graph.es[self.link_to_node]}
+            self.link_from_node: self._graph.es[self.link_from_node],
+            self.link_to_node: self._graph.es[self.link_to_node]}
 
         for attr in link_attrs:
 
-            data[attr] = self.graph.es[attr]
+            data[attr] = self._graph.es[attr]
 
         return pd.DataFrame(data).set_index([self.link_from_node, self.link_to_node]).dropna()

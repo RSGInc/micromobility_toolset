@@ -135,109 +135,6 @@ def _read_dataframe(file_path, index_col, table_name=None):
     return df
 
 
-def filter_impact_area(base_scenario, build_scenario=None, zone_ids=None):
-
-    logger = logging.getLogger('Impact Area')
-    if not build_scenario:
-        assert zone_ids is not None, \
-            "need either a comparison scenario or a list of zone IDs"
-
-        base_mask = base_scenario.zone_df.index.isin(zone_ids)
-
-    else:
-        zone_nodes = _get_zone_diff(base_scenario, build_scenario)
-
-        base_node_col = base_scenario.zone_settings.get('zone_node_column')
-        build_node_col = build_scenario.zone_settings.get('zone_node_column')
-        base_mask = base_scenario.zone_df[base_node_col].isin(zone_nodes)
-        build_mask = build_scenario.zone_df[build_node_col].isin(zone_nodes)
-
-        # replace zone_dfs and related properties
-        build_scenario.zone_df = build_scenario.zone_df[build_mask]
-
-        del build_scenario.zone_nodes
-        del build_scenario.zone_list
-
-        logger.info(f'using {len(build_scenario.zone_df.index)} zones')
-
-    base_scenario.zone_df = base_scenario.zone_df[base_mask]
-    del base_scenario.zone_nodes
-    del base_scenario.zone_list
-
-    logger.warn(
-        f'using {len(base_scenario.zone_df.index)} zones. '
-        'make sure to delete output matrices if subsequent runs use more zones.')
-
-
-def _get_zone_diff(base_scenario, build_scenario):
-    base_zone_df = base_scenario.zone_df
-    build_zone_df = build_scenario.zone_df
-
-    for scenario, df in zip([base_scenario, build_scenario], [base_zone_df, build_zone_df]):
-        scenario.logger.info(f'filtering {len(df.index)} zones...')
-
-    changed_nodes = []
-
-    base_links = base_scenario.network.link_df.round(4).reset_index()
-    build_links = build_scenario.network.link_df.round(4).reset_index()
-    link_diff = pd.concat([base_links, build_links]).drop_duplicates(keep=False)
-
-    if link_diff.empty:
-        base_scenario.logger.info(f'links match {build_scenario.name}')
-
-    else:
-        from_nodes = list(link_diff[base_scenario.network_settings.get('from_name')])
-        to_nodes = list(link_diff[base_scenario.network_settings.get('to_name')])
-        link_nodes = list(set(from_nodes + to_nodes))
-        base_scenario.logger.info(f'links differ from {build_scenario.name} by {len(link_nodes)} nodes.')
-
-        changed_nodes.extend(link_nodes)
-
-    # 7 decimals of latlong precision is the practical limit of commercial surveying
-    base_nodes = base_scenario.network.node_df.round(7).reset_index()
-    build_nodes = build_scenario.network.node_df.round(7).reset_index()
-    node_diff = pd.concat([base_nodes, build_nodes]).drop_duplicates(keep=False)
-
-    if node_diff.empty:
-        base_scenario.logger.info(f'nodes match {build_scenario.name}')
-
-    else:
-        nodes = list(set(node_diff[base_scenario.network_settings.get('node_name')]))
-        base_scenario.logger.info(f'nodes differ from {build_scenario.name} by {len(nodes)} nodes.')
-
-        changed_nodes.extend(nodes)
-
-    node_col = base_scenario.zone_settings.get('zone_node_column')
-    zone_diff = pd.concat([
-        base_scenario.zone_df.round(4).reset_index(),
-        build_scenario.zone_df.round(4).reset_index()]).drop_duplicates(keep=False)
-
-    if zone_diff.empty:
-        base_scenario.logger.info(f'zones match {build_scenario.name}')
-
-    else:
-        zone_nodes = list(set(zone_diff[node_col]))
-        base_scenario.logger.info(f'zones differ from {build_scenario.name} by {len(zone_nodes)} zones.')
-
-        changed_nodes.extend(zone_nodes)
-
-    if not changed_nodes:
-        return
-
-    build_scenario.logger.info('getting nearby zones from the network...')
-    nearby_zones = build_scenario.network.get_nearby_pois(
-        build_zone_df[node_col],
-        changed_nodes,
-        build_scenario.network_settings.get('route_varcoef_bike'),
-        max_cost=build_scenario.network_settings.get('max_cost_bike'))
-
-    zone_nodes = []
-    for zones in nearby_zones.values():
-        zone_nodes.extend(zones)
-
-    return list(set(zone_nodes))
-
-
 class Scenario():
 
     def __init__(self, name, config, inputs, outputs):
@@ -446,11 +343,11 @@ class Scenario():
         # TODO: convert Nones to nans a bit more gracefully
         zone_nodes = np.array(self.zone_nodes).astype(float)
         graph_nodes = np.searchsorted(
-            np.array(self.network.graph.vs['name'], dtype=np.float),
+            np.array(self.network._graph.vs['name'], dtype=np.float),
             zone_nodes)
 
-        self.network.graph.es[load_name] = 0
-        edges = np.array(self.network.graph.es.indices)
+        self.network.set_edge_values(load_name, 0)
+        edges = np.array(self.network._graph.es.indices)
         values = np.zeros(len(edges))
 
         for orig_idx in np.unique(zone_idxs[0]):
@@ -462,7 +359,7 @@ class Scenario():
 
             # one-to-many shortest path search.
             # returns nested list of graph edge ids
-            path_list = self.network.graph.get_shortest_paths(
+            path_list = self.network._graph.get_shortest_paths(
                 v=orig_node,
                 to=dest_nodes,
                 weights=cost_attr,
@@ -473,7 +370,7 @@ class Scenario():
                 edge_idxs = np.searchsorted(edges, path)
                 values[edge_idxs] += attributes[orig_idx, dest_idxs[i]]
 
-        self.network.graph.es[list(edges)][load_name] = list(values)
+        self.network.set_edge_values(load_name, values)
         self.logger.info('done.')
 
     def _read_skim_file(self, file_path):
