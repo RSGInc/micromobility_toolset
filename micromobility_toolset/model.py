@@ -29,6 +29,7 @@ See utah_bike_demand_model.py for a usage example.
 
 """
 
+import sys
 import os
 import time
 import yaml
@@ -54,8 +55,12 @@ def config_logger():
     ch.setLevel(logging.INFO)
 
     # file handler
+
+    if not os.path.exists("logs"):
+        os.mkdir("logs")
+
     logfile = f"micromobility_toolset_{time.strftime('%Y%b%d_%H_%M_%S_%p')}.log"
-    fh = logging.FileHandler(logfile)
+    fh = logging.FileHandler(os.path.join("logs", logfile))
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
@@ -63,8 +68,16 @@ def config_logger():
     fh.setLevel(logging.DEBUG)
 
     logging.captureWarnings(True)
-    logging.basicConfig(level=logging.DEBUG, handlers=[ch, fh])
-    # force=True)
+
+    kwargs = {
+        "level": logging.DEBUG,
+        "handlers": [ch, fh],
+    }
+
+    if sys.version_info.minor >= 8:
+        kwargs["force"] = True
+
+    logging.basicConfig(**kwargs)
 
 
 def step():
