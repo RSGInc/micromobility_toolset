@@ -4,11 +4,11 @@ import numpy as np
 import pandas as pd
 
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
 
 
-class Skim():
-
+class Skim:
     def __init__(self, data, **kwargs):
         """
         data: numpy array or pandas DataFrame
@@ -21,11 +21,11 @@ class Skim():
             self.from_dataframe(data, **kwargs)
 
         else:
-            raise TypeError('data must be a numpy array or pandas DataFrame')
+            raise TypeError("data must be a numpy array or pandas DataFrame")
 
-    def from_numpy(self, data, mapping=None,
-                   orig_name=None, dest_name=None,
-                   core_names=None):
+    def from_numpy(
+        self, data, mapping=None, orig_name=None, dest_name=None, core_names=None
+    ):
         """
         data: 2- or 3- dimensional numpy array
         mapping: listlike of matrix index ids (int)
@@ -40,9 +40,9 @@ class Skim():
         self._set_index(orig_name, dest_name)
         self._set_core_names(core_names)
 
-    def from_dataframe(self, data, mapping=None,
-                       orig_name=None, dest_name=None,
-                       core_names=None):
+    def from_dataframe(
+        self, data, mapping=None, orig_name=None, dest_name=None, core_names=None
+    ):
 
         if isinstance(data.index, pd.MultiIndex):
             # FIX: what if the index names already exist?
@@ -56,7 +56,9 @@ class Skim():
 
             # TODO: logger debug difference between dataframe and mapping
             # only retrieve rows from mapping
-            data = data[data.index.isin(mapping, level=0) & data.index.isin(mapping, level=1)]
+            data = data[
+                data.index.isin(mapping, level=0) & data.index.isin(mapping, level=1)
+            ]
 
         o_vals = data.index.get_level_values(0)
         d_vals = data.index.get_level_values(1)
@@ -105,10 +107,10 @@ class Skim():
 
     def _set_matrix(self, data):
         if data.ndim not in [2, 3]:
-            raise IndexError(f'input matrix must be 2 or 3 dimensions, not {data.ndim}')
+            raise IndexError(f"input matrix must be 2 or 3 dimensions, not {data.ndim}")
 
         if not data.shape[0] == data.shape[1]:
-            raise IndexError(f'matrix dimensions 1 and 2 do not match: {data.shape}')
+            raise IndexError(f"matrix dimensions 1 and 2 do not match: {data.shape}")
 
         length = data.shape[0]
         if data.ndim == 2:
@@ -125,13 +127,15 @@ class Skim():
 
         elif isinstance(mapping, list) or isinstance(mapping, np.ndarray):
             if not len(mapping) == self._length:
-                raise IndexError(f'mapping of {len(mapping)} items cannot be applied to matrix '
-                                 f'with shape {self._matrix.shape}')
+                raise IndexError(
+                    f"mapping of {len(mapping)} items cannot be applied to matrix "
+                    f"with shape {self._matrix.shape}"
+                )
 
             self._mapping = np.array(mapping)
 
         else:
-            raise TypeError('int or list for now')
+            raise TypeError("int or list for now")
 
     def _set_num_cores(self):
 
@@ -155,7 +159,7 @@ class Skim():
             self._core_names = core_names
 
         else:
-            raise TypeError('None or list for now')
+            raise TypeError("None or list for now")
 
     @property
     def shape(self):
@@ -184,8 +188,11 @@ class Skim():
     def add_core(self, matrix, name):
 
         assert name not in self._core_names
-        assert matrix.shape == (self._length, self._length) \
-            or matrix.shape == (self._length, self.length, 1)
+        assert matrix.shape == (self._length, self._length) or matrix.shape == (
+            self._length,
+            self.length,
+            1,
+        )
 
         matrix = matrix.reshape((self._length, self._length, 1))
         new_matrix = np.concatenate((self._matrix, matrix), axis=2)
@@ -204,16 +211,15 @@ class Skim():
         multi_index = pd.MultiIndex.from_arrays(
             [
                 np.repeat(self._mapping, self._length),
-                np.tile(self._mapping, self._length)
+                np.tile(self._mapping, self._length),
             ],
-            names=[self._orig_name, self._dest_name])
+            names=[self._orig_name, self._dest_name],
+        )
 
         # row-wise reshape, origins first, then destinations
         data = self._matrix.reshape(self._length ** 2, self._num_cores)
 
-        df = pd.DataFrame(data,
-                          index=multi_index,
-                          columns=self._core_names)
+        df = pd.DataFrame(data, index=multi_index, columns=self._core_names)
 
         return df.loc[(df != 0).any(axis=1)]  # don't use all-zero rows
 
@@ -227,9 +233,7 @@ class Skim():
         db_connection = sqlite3.connect(filename)
 
         try:
-            self.to_dataframe().to_sql(name=table_name,
-                                       con=db_connection,
-                                       **kwargs)
+            self.to_dataframe().to_sql(name=table_name, con=db_connection, **kwargs)
 
         finally:
             db_connection.close()
@@ -243,34 +247,40 @@ class Skim():
         pass
 
     @classmethod
-    def from_sqlite(cls, sqlite_file, table_name,
-                    orig_name, dest_name,
-                    core_names=None,
-                    mapping=None):
+    def from_sqlite(
+        cls,
+        sqlite_file,
+        table_name,
+        orig_name,
+        dest_name,
+        core_names=None,
+        mapping=None,
+    ):
 
         # open database cursor
         db_connection = sqlite3.connect(sqlite_file)
 
         try:
-            matrix_df = pd.read_sql(f'select * from {table_name}',
-                                    db_connection,
-                                    index_col=[orig_name, dest_name],
-                                    columns=core_names)
+            matrix_df = pd.read_sql(
+                f"select * from {table_name}",
+                db_connection,
+                index_col=[orig_name, dest_name],
+                columns=core_names,
+            )
 
-            return cls(matrix_df,
-                       orig_name=orig_name,
-                       dest_name=dest_name,
-                       core_names=core_names,
-                       mapping=mapping)
+            return cls(
+                matrix_df,
+                orig_name=orig_name,
+                dest_name=dest_name,
+                core_names=core_names,
+                mapping=mapping,
+            )
 
         finally:
             db_connection.close()
 
     @classmethod
-    def from_csv(cls, csv_file,
-                 orig_name, dest_name,
-                 core_names=None,
-                 mapping=None):
+    def from_csv(cls, csv_file, orig_name, dest_name, core_names=None, mapping=None):
 
         if core_names:
             # usecols doesn't include index_col values by default
@@ -279,12 +289,14 @@ class Skim():
             # None will include all columns
             columns = None
 
-        matrix_df = pd.read_csv(csv_file,
-                                index_col=[orig_name, dest_name],
-                                usecols=None)
+        matrix_df = pd.read_csv(
+            csv_file, index_col=[orig_name, dest_name], usecols=None
+        )
 
-        return cls(matrix_df,
-                   orig_name=orig_name,
-                   dest_name=dest_name,
-                   core_names=core_names,
-                   mapping=mapping)
+        return cls(
+            matrix_df,
+            orig_name=orig_name,
+            dest_name=dest_name,
+            core_names=core_names,
+            mapping=mapping,
+        )

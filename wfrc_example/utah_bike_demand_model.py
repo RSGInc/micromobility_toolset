@@ -30,35 +30,38 @@ from micromobility_toolset.network import preprocessor
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--step', '--name', dest='step', action='store', choices=model.list_steps())
-    parser.add_argument('--sample', dest='sample', action='store', type=int)
+    parser.add_argument(
+        "--step", "--name", dest="step", action="store", choices=model.list_steps()
+    )
+    parser.add_argument("--sample", dest="sample", action="store", type=int)
     args = parser.parse_args()
 
     utah_scenario = model.Scenario(
-        name='Utah Scenario',
-        config='Model_Configs',
-        inputs='Model_Inputs',
-        outputs='Model_Outputs')
+        name="Utah Scenario",
+        config="Model_Configs",
+        inputs="Model_Inputs",
+        outputs="Model_Outputs",
+    )
 
     if args.step:
         model.run(args.step, utah_scenario)
 
     else:
-        model.run('skim_network', utah_scenario)
-        model.run('generate_demand', utah_scenario)
-        model.run('assign_demand', utah_scenario)
+        model.run("skim_network", utah_scenario)
+        model.run("generate_demand", utah_scenario)
+        model.run("assign_demand", utah_scenario)
 
 
 @preprocessor()
 def preprocess_network(net):
     """add network attributes that are combinations of existing attributes"""
 
-    distance = net.get_edge_values('distance', dtype='float')
-    slope = net.get_edge_values('distance', dtype='float')
-    bike_blvd = net.get_edge_values('bike_boulevard', dtype='bool')
-    bike_path = net.get_edge_values('bike_path', dtype='bool')
-    bike_lane = net.get_edge_values('bike_lane', dtype='bool')
-    aadt = net.get_edge_values('AADT', dtype='float')
+    distance = net.get_edge_values("distance", dtype="float")
+    slope = net.get_edge_values("distance", dtype="float")
+    bike_blvd = net.get_edge_values("bike_boulevard", dtype="bool")
+    bike_path = net.get_edge_values("bike_path", dtype="bool")
+    bike_lane = net.get_edge_values("bike_lane", dtype="bool")
+    aadt = net.get_edge_values("AADT", dtype="float")
 
     light = (10e3 < aadt) & (aadt < 20e3)
     med = (20e3 <= aadt) & (aadt < 30e3)
@@ -68,17 +71,17 @@ def preprocess_network(net):
     med_slope = (4.0 <= slope) & (slope < 6.0)
     big_slope = 6.0 < slope
 
-    turn = net.get_edge_values('turn', dtype='bool')
-    signal = net.get_edge_values('traffic_signal', dtype='bool')
-    turn_type = net.get_edge_values('turn_type', dtype='str')
-    parallel_aadt = net.get_edge_values('parallel_aadt', dtype='float')
-    cross_aadt = net.get_edge_values('cross_aadt', dtype='float')
+    turn = net.get_edge_values("turn", dtype="bool")
+    signal = net.get_edge_values("traffic_signal", dtype="bool")
+    turn_type = net.get_edge_values("turn_type", dtype="str")
+    parallel_aadt = net.get_edge_values("parallel_aadt", dtype="float")
+    cross_aadt = net.get_edge_values("cross_aadt", dtype="float")
 
-    left = turn_type == 'left'
-    left_or_straight = (turn_type == 'left') | (turn_type == 'straight')
-    right = turn_type == 'right'
+    left = turn_type == "left"
+    left_or_straight = (turn_type == "left") | (turn_type == "straight")
+    right = turn_type == "right"
 
-    light_cross= (5e3 < cross_aadt) & (cross_aadt < 10e3)
+    light_cross = (5e3 < cross_aadt) & (cross_aadt < 10e3)
     med_cross = (10e3 <= cross_aadt) & (cross_aadt < 20e3)
     heavy_cross = 20e3 <= cross_aadt
 
@@ -86,32 +89,34 @@ def preprocess_network(net):
     heavy_parallel = 20e3 <= parallel_aadt
 
     # distance coefficients
-    bike_cost = \
-        distance * (
-            1.0 + \
-            (bike_blvd * -0.108) + \
-            (bike_path * -0.16) + \
-            (small_slope * 0.371) + \
-            (med_slope * 1.23) + \
-            (big_slope * 3.239) + \
-            (bike_lane * med * 0.25) + \
-            (bike_lane * heavy * 1.65) + \
-            (~bike_lane * light * 0.368) + \
-            (~bike_lane * med * 1.4) + \
-            (~bike_lane * heavy * 7.157))
+    bike_cost = distance * (
+        1.0
+        + (bike_blvd * -0.108)
+        + (bike_path * -0.16)
+        + (small_slope * 0.371)
+        + (med_slope * 1.23)
+        + (big_slope * 3.239)
+        + (bike_lane * med * 0.25)
+        + (bike_lane * heavy * 1.65)
+        + (~bike_lane * light * 0.368)
+        + (~bike_lane * med * 1.4)
+        + (~bike_lane * heavy * 7.157)
+    )
 
     # fixed-cost penalties
-    bike_cost += \
-        (turn * 0.034) + \
-        (signal * 0.017) + \
-        (left_or_straight * light_cross * 0.048) + \
-        (left_or_straight * med_cross * 0.05) + \
-        (left_or_straight * heavy_cross * 0.26) + \
-        (right * heavy_cross * 0.031) + \
-        (left * med_parallel * 0.073) + \
-        (left * heavy_parallel * 0.18)
+    bike_cost += (
+        (turn * 0.034)
+        + (signal * 0.017)
+        + (left_or_straight * light_cross * 0.048)
+        + (left_or_straight * med_cross * 0.05)
+        + (left_or_straight * heavy_cross * 0.26)
+        + (right * heavy_cross * 0.031)
+        + (left * med_parallel * 0.073)
+        + (left * heavy_parallel * 0.18)
+    )
 
-    net.set_edge_values('bike_cost', bike_cost)
+    net.set_edge_values("bike_cost", bike_cost)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

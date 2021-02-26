@@ -11,32 +11,33 @@ def generate_demand(*scenarios):
     skims and landuse data.
     """
 
-    np.seterr(divide='ignore', invalid='ignore')
+    np.seterr(divide="ignore", invalid="ignore")
 
     for scenario in scenarios:
 
-        buffer_dist = scenario.zone_settings.get('buffer_dist')
-        zone_buffer = (1 / (1 + np.exp(4 * (scenario.distance_skim - buffer_dist/2))))
+        buffer_dist = scenario.zone_settings.get("buffer_dist")
+        zone_buffer = 1 / (1 + np.exp(4 * (scenario.distance_skim - buffer_dist / 2)))
 
         # initialize dataframes
         buffered_zones = pd.DataFrame(index=scenario.zone_list)
         trip_gen_df = pd.DataFrame(index=scenario.zone_list)
         dest_size_df = pd.DataFrame(index=scenario.zone_list)
 
-        for measure in scenario.zone_settings.get('buffer_cols'):
+        for measure in scenario.zone_settings.get("buffer_cols"):
             zone_col = scenario.zone_df[measure].values
             buffered_zones[measure] = np.sum(zone_col * zone_buffer, axis=0)
 
-        for segment in scenario.trip_settings.get('segments'):
-
+        for segment in scenario.trip_settings.get("segments"):
 
             orig_trips = create_trips(scenario, segment, buffered_zones)
 
             # save segment trips to production df
             trip_gen_df[segment] = orig_trips
 
-            dest_cols = scenario.trip_settings.get('dest_choice_coefs')[segment].keys()
-            dest_coefs = scenario.trip_settings.get('dest_choice_coefs')[segment].values()
+            dest_cols = scenario.trip_settings.get("dest_choice_coefs")[segment].keys()
+            dest_coefs = scenario.trip_settings.get("dest_choice_coefs")[
+                segment
+            ].values()
             dest_coefs = np.array(list(dest_coefs))
             dest_vals = scenario.zone_df[dest_cols].values
 
@@ -48,30 +49,32 @@ def generate_demand(*scenarios):
 
             distribute_trips(scenario, segment, orig_trips, dest_size)
 
-
         # finally, save intermediate calculations to disk
-        buffered_zones.round(4).to_csv(scenario.data_file_path('buffered_zones.csv'))
-        trip_gen_df.round(4).to_csv(scenario.data_file_path('zone_production_size.csv'))
-        dest_size_df.round(4).to_csv(scenario.data_file_path('zone_attraction_size.csv'))
+        buffered_zones.round(4).to_csv(scenario.data_file_path("buffered_zones.csv"))
+        trip_gen_df.round(4).to_csv(scenario.data_file_path("zone_production_size.csv"))
+        dest_size_df.round(4).to_csv(
+            scenario.data_file_path("zone_attraction_size.csv")
+        )
 
 
 def create_trips(scenario, segment, buffered_zones):
     # origin zone trips
-    zone_hh_col = scenario.trip_settings.get('hh_col')
-    zone_cols = scenario.trip_settings.get('trip_gen_zone_coefs')[segment].keys()
-    zone_coefs = scenario.trip_settings.get('trip_gen_zone_coefs')[segment].values()
+    zone_hh_col = scenario.trip_settings.get("hh_col")
+    zone_cols = scenario.trip_settings.get("trip_gen_zone_coefs")[segment].keys()
+    zone_coefs = scenario.trip_settings.get("trip_gen_zone_coefs")[segment].values()
     zone_coefs = np.array(list(zone_coefs))
     zone_vals = scenario.zone_df[zone_cols].values
 
-    buffer_cols = scenario.trip_settings.get('trip_gen_buffer_coefs')[segment].keys()
-    buffer_coefs = scenario.trip_settings.get('trip_gen_buffer_coefs')[segment].values()
+    buffer_cols = scenario.trip_settings.get("trip_gen_buffer_coefs")[segment].keys()
+    buffer_coefs = scenario.trip_settings.get("trip_gen_buffer_coefs")[segment].values()
     buffer_coefs = np.array(list(buffer_coefs))
     buffer_vals = buffered_zones[buffer_cols].values
 
-    orig_trips = \
-        scenario.trip_settings.get('trip_gen_consts')[segment] + \
-        np.sum(zone_vals * zone_coefs, axis=1) + \
-        np.sum(buffer_vals * buffer_coefs, axis=1)
+    orig_trips = (
+        scenario.trip_settings.get("trip_gen_consts")[segment]
+        + np.sum(zone_vals * zone_coefs, axis=1)
+        + np.sum(buffer_vals * buffer_coefs, axis=1)
+    )
 
     orig_trips[orig_trips < 0] = 0
 
@@ -83,44 +86,45 @@ def create_trips(scenario, segment, buffered_zones):
 
 def distribute_trips(scenario, segment, orig_trips, dest_size):
 
-    max_dist = scenario.trip_settings.get('trip_max_dist')[segment]
-    dest_avail = (
-        (scenario.distance_skim > 0)
-        * (scenario.distance_skim < max_dist)
-        + np.diag(np.ones(scenario.num_zones))
+    max_dist = scenario.trip_settings.get("trip_max_dist")[segment]
+    dest_avail = (scenario.distance_skim > 0) * (
+        scenario.distance_skim < max_dist
+    ) + np.diag(np.ones(scenario.num_zones))
+
+    intrazonal = np.diag(
+        np.ones(scenario.num_zones)
+        * scenario.trip_settings.get("bike_intrazonal")[segment]
     )
 
-    intrazonal = \
-        np.diag(
-            np.ones(scenario.num_zones) * \
-            scenario.trip_settings.get('bike_intrazonal')[segment])
-
-    cost_attr = scenario.trip_settings.get('trip_cost_attr')[segment]
-    gen_cost = \
-        scenario.skims.get_core(cost_attr) + \
-        intrazonal + \
-        scenario.trip_settings.get('bike_asc')[segment]
+    cost_attr = scenario.trip_settings.get("trip_cost_attr")[segment]
+    gen_cost = (
+        scenario.skims.get_core(cost_attr)
+        + intrazonal
+        + scenario.trip_settings.get("bike_asc")[segment]
+    )
 
     bike_util = np.log(dest_size + 1) + gen_cost
     bike_util = np.exp(bike_util - 999 * (1 - dest_avail))
 
     # destination-choice fraction
-    dc_frac = np.nan_to_num(bike_util / np.sum(bike_util, axis=1).reshape(-1,1))
+    dc_frac = np.nan_to_num(bike_util / np.sum(bike_util, axis=1).reshape(-1, 1))
     # print(np.sum(dc_frac, axis=1))  # should be all ones
 
     # allocate orig trips to destinations
-    bike_trips = orig_trips.reshape(-1,1) * dc_frac
+    bike_trips = orig_trips.reshape(-1, 1) * dc_frac
 
-    scenario.logger.info(f'{segment} home-based trips: {int(np.sum(bike_trips))}')
+    scenario.logger.info(f"{segment} home-based trips: {int(np.sum(bike_trips))}")
 
     scenario.save_trip_matrix(bike_trips, segment)
 
     # non-home-based trips
-    nhb_factor = scenario.trip_settings.get('nhb_factor').get(segment)
+    nhb_factor = scenario.trip_settings.get("nhb_factor").get(segment)
     if nhb_factor:
         nhb_orig_trips = np.sum(bike_trips, axis=1) * nhb_factor
-        nhb_bike_trips = nhb_orig_trips.reshape(-1,1) * dc_frac
+        nhb_bike_trips = nhb_orig_trips.reshape(-1, 1) * dc_frac
 
-        scenario.logger.info(f'{segment} non-home-based trips: {int(np.sum(nhb_bike_trips))}')
+        scenario.logger.info(
+            f"{segment} non-home-based trips: {int(np.sum(nhb_bike_trips))}"
+        )
 
-        scenario.save_trip_matrix(nhb_bike_trips, f'{segment}_nhb')
+        scenario.save_trip_matrix(nhb_bike_trips, f"{segment}_nhb")
