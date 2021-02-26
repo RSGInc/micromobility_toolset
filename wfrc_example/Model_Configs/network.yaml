@@ -43,4 +43,3 @@ skim_max_cost: 7.5  # maximum cost to save in skims
 
 skim_weights:
     - bike_cost
-

@@ -1,10 +1,10 @@
 import sqlite3
 
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
 import numpy as np
 import pandas as pd
+
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 class Skim():
@@ -104,7 +104,7 @@ class Skim():
         self._set_core_names(core_names)
 
     def _set_matrix(self, data):
-        if not data.ndim in [2, 3]:
+        if data.ndim not in [2, 3]:
             raise IndexError(f'input matrix must be 2 or 3 dimensions, not {data.ndim}')
 
         if not data.shape[0] == data.shape[1]:
@@ -174,7 +174,7 @@ class Skim():
 
     def get_core(self, name):
 
-        if not name in self._core_names:
+        if name not in self._core_names:
             raise KeyError(f"'{name} not found in skim")
 
         idx = self._core_names.index(name)
@@ -188,7 +188,7 @@ class Skim():
             or matrix.shape == (self._length, self.length, 1)
 
         matrix = matrix.reshape((self._length, self._length, 1))
-        new_matrix = np.concatenate((self._matrix, matrix), axis=2) 
+        new_matrix = np.concatenate((self._matrix, matrix), axis=2)
 
         self._set_matrix(new_matrix)
         self._set_num_cores()

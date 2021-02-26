@@ -45,6 +45,7 @@ def main():
         model.run(args.step, utah_scenario)
 
     else:
+        model.run('skim_network', utah_scenario)
         model.run('generate_demand', utah_scenario)
         model.run('assign_demand', utah_scenario)
 

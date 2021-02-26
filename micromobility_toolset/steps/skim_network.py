@@ -14,15 +14,16 @@ def skim_network(*scenarios):
 
         scenario.logger.info('getting skims...')
 
-        scenario.logger.info('bike skim stats')
+        skims = scenario.skims
+        scenario.logger.info(f'zone count: {skims.length}')
 
-        skim_matrix = scenario.bike_skim
+        for core in skims.core_names:
 
-        scenario.logger.info(f'zone count: {skim_matrix.shape[0]}')
-        scenario.logger.info(f'min dist: {np.amin(skim_matrix)}')
-        scenario.logger.info(f'max dist: {np.amax(skim_matrix)}')
-        scenario.logger.info(f'median: {np.median(skim_matrix)}')
-        scenario.logger.info(f'mean: {np.mean(skim_matrix)}')
-        scenario.logger.info(f'zero count: {np.count_nonzero(skim_matrix==0)}')
-        scenario.logger.info(f'non zero count: {np.count_nonzero(skim_matrix)}')
+            skim_matrix = skims.get_core(core)
 
+            scenario.logger.info(f'{core} min cost: {np.amin(skim_matrix)}')
+            scenario.logger.info(f'{core} max cost: {np.amax(skim_matrix)}')
+            scenario.logger.info(f'{core} median: {np.median(skim_matrix)}')
+            scenario.logger.info(f'{core} mean: {np.mean(skim_matrix)}')
+            scenario.logger.info(f'{core} zero count: {np.count_nonzero(skim_matrix==0)}')
+            scenario.logger.info(f'{core} non zero count: {np.count_nonzero(skim_matrix)}')
