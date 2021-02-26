@@ -36,7 +36,10 @@ def assign_demand(*scenarios):
 
         scenario.logger.info("assigning trips to network...")
 
-        scenario.load_network_sums(total_demand, 'bike_vol')
+        scenario.load_network_sums(
+            attributes=total_demand,
+            cost_attr='bike_cost', # TODO: parameterize
+            load_name='bike_vol')
 
         link_df = scenario.network.get_link_attributes(['bike_vol', 'distance'])
         link_df = link_df[link_df.bike_vol != 0]

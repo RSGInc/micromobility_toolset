@@ -428,20 +428,7 @@ class Scenario():
         self.logger.info(f'num zones: {len(self.zone_list)}')
         return len(self.zone_list)
 
-    def reachable_zones(self, max_dist=None, min_dist=0):
-        """tuple of (origin zone indices, destination zone indices) for non-intrazonal
-        zone-to-zone pairs less than max_dist and greater than min_dist
-        """
-
-        dist_skim = self.distance_skim
-        dist_skim[dist_skim < min_dist] = 0
-
-        if max_dist:
-            dist_skim[dist_skim > max_dist] = 0
-
-        return np.nonzero(dist_skim + np.diag(np.ones(self.num_zones)))
-
-    def load_network_sums(self, attributes, load_name):
+    def load_network_sums(self, attributes, cost_attr, load_name):
         """
         TODO:
         - add docstring
@@ -449,11 +436,14 @@ class Scenario():
         - move method to Network
         """
 
-        reachable_zones = self.reachable_zones(max_dist=max_dist, min_dist=min_dist)
+        assert attributes.shape == (self.num_zones, self.num_zones)
+
+        zone_idxs = np.nonzero(attributes)
         self.logger.info(
             f'calculating {cost_attr} network paths for '
-            f'{len(reachable_zones[0])} zone pairs...')
+            f'{len(zone_idxs[0])} zone pairs...')
 
+        # TODO: convert Nones to nans a bit more gracefully
         zone_nodes = np.array(self.zone_nodes).astype(float)
         graph_nodes = np.searchsorted(
             np.array(self.network.graph.vs['name'], dtype=np.float),
@@ -463,16 +453,15 @@ class Scenario():
         edges = np.array(self.network.graph.es.indices)
         values = np.zeros(len(edges))
 
-        reachable_zones = self.reachable_zones
-        for orig_idx in np.unique(reachable_zones[0]):
+        for orig_idx in np.unique(zone_idxs[0]):
 
             # skim indices of reachable destination zones
-            dest_idxs = reachable_zones[1][np.where(reachable_zones[0]==orig_idx)[0]]
+            dest_idxs = zone_idxs[1][np.where(zone_idxs[0]==orig_idx)[0]]
             orig_node = graph_nodes[orig_idx]  # note: zone_nodes have the same index as skim levels
             dest_nodes = graph_nodes[dest_idxs]
 
             # one-to-many shortest path search.
-            # returns nested list of edge ids
+            # returns nested list of graph edge ids
             path_list = self.network.graph.get_shortest_paths(
                 v=orig_node,
                 to=dest_nodes,
@@ -485,6 +474,7 @@ class Scenario():
                 values[edge_idxs] += attributes[orig_idx, dest_idxs[i]]
 
         self.network.graph.es[list(edges)][load_name] = list(values)
+        self.logger.info('done.')
 
     def _read_skim_file(self, file_path):
 
