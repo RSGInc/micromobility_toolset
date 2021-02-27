@@ -118,7 +118,6 @@ def run(steps, *scenarios):
     if not all(step in STEPS for step in steps):
         raise KeyError(f"Invalid step list {steps}")
 
-    config_logger()
     logger = logging.getLogger("Micromobility Toolset")
 
     for step in steps:

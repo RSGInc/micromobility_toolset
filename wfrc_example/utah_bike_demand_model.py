@@ -36,6 +36,7 @@ def main():
     parser.add_argument("--sample", dest="sample", action="store", type=int)
     args = parser.parse_args()
 
+    model.config_logger()
     utah_scenario = model.Scenario(
         name="Utah Scenario",
         config="Model_Configs",
