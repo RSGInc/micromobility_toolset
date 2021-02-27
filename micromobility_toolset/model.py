@@ -150,6 +150,40 @@ def _read_dataframe(file_path, index_col, table_name=None):
     return df
 
 
+class Settings:
+    """Helper class to ensure every '.get' from a config dictionary is valid
+    """
+
+    def __init__(self, file_path):
+
+        self.name = os.path.basename(file_path)
+        self.logger = logging.getLogger(self.name)
+        self.settings = self._read_settings_file(file_path)
+
+    def _read_settings_file(self, file_path):
+
+        self.logger.debug(f"reading settings from {file_path}")
+
+        with open(file_path) as f:
+            settings = yaml.safe_load(f.read())
+
+        self.logger.debug(f"\n{yaml.dump(settings)}")
+
+        return settings
+
+    def get(self, key, default=None):
+
+        if key in self.settings:
+            return self.settings[key]
+
+        if default is not None:
+
+            self.logger.debug(f"using default value for {key}: {default}")
+            return default
+
+        raise KeyError(f"expected '{key}' in {self.name}")
+
+
 class Scenario:
     def __init__(self, name, config, inputs, outputs):
 
@@ -249,18 +283,6 @@ class Scenario:
         self.logger.debug("clearing cache")
         self._cache = {}
 
-    def _read_settings_file(self, filename):
-
-        file_path = self.config_file_path(filename)
-        self.logger.debug(f"reading settings from {file_path}")
-
-        with open(file_path) as f:
-            settings = yaml.safe_load(f.read())
-
-        self.logger.debug(f"\n{yaml.dump(settings)}")
-
-        return settings
-
     def logger(self):
         logger = logging.getLogger(self.name)
 
@@ -269,22 +291,29 @@ class Scenario:
     @cache
     def zone_settings(self):
 
-        return self._read_settings_file("zone.yaml")
+        file_path = self.config_file_path("zone.yaml")
+
+        return Settings(file_path)
 
     @cache
     def network_settings(self):
 
-        return self._read_settings_file("network.yaml")
+        file_path = self.config_file_path("network.yaml")
+
+        return Settings(file_path)
 
     @cache
     def trip_settings(self):
-        return self._read_settings_file("trips.yaml")
+
+        file_path = self.config_file_path("trips.yaml")
+
+        return Settings(file_path)
 
     @cache
     def network(self):
 
         self.logger.info("creating network ...")
-        net_settings = self.network_settings.copy()
+        net_settings = self.network_settings.settings
 
         link_file = self.data_file_path(net_settings.get("link_file"))
         node_file = self.data_file_path(net_settings.get("node_file"))
@@ -309,12 +338,11 @@ class Scenario:
         file_name = self.zone_settings.get("zone_file_name")
         zone_col = self.zone_settings.get("zone_zone_column")
         node_col = self.zone_settings.get("zone_node_column")
-        zone_table = self.zone_settings.get("zone_table_name")
 
         file_path = self.data_file_path(file_name)
         self.logger.debug(f"reading zones from {file_path}")
 
-        zone_df = _read_dataframe(file_path, zone_col, table_name=zone_table)
+        zone_df = _read_dataframe(file_path, zone_col)
 
         self.logger.debug(f"zone dataframe columns: {zone_df.columns}")
         self.logger.debug(f"number of zones: {len(zone_df)}")

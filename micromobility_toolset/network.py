@@ -276,35 +276,35 @@ class Network:
         self.name = kwargs.get("name", "Network")
         self.logger = logging.getLogger(self.name)
 
-        self.node_name = kwargs.get("node_name")
-        self.node_x_name = kwargs.get("node_x_name")
-        self.node_y_name = kwargs.get("node_y_name")
-        self.link_name = kwargs.get("link_name")
-        self.link_from_node = kwargs.get("from_name")
-        self.link_to_node = kwargs.get("to_name")
+        self.node_name = kwargs["node_name"]
+        self.node_x_name = kwargs["node_x_name"]
+        self.node_y_name = kwargs["node_y_name"]
+        self.link_name = kwargs["link_name"]
+        self.link_from_node = kwargs["from_name"]
+        self.link_to_node = kwargs["to_name"]
 
         self.node_df = read_nodes(
-            kwargs.get("node_file"),
+            kwargs["node_file"],
             kwargs.get("node_table_name"),
-            kwargs.get("node_name"),
+            kwargs["node_name"],
             self.node_x_name,
             self.node_y_name,
         )
 
         self.link_df = read_links(
-            kwargs.get("link_file"),
+            kwargs["link_file"],
             kwargs.get("link_table_name"),
-            kwargs.get("link_name"),
-            kwargs.get("from_name"),
-            kwargs.get("to_name"),
-            kwargs.get("link_attributes_by_direction"),
+            kwargs["link_name"],
+            kwargs["from_name"],
+            kwargs["to_name"],
+            kwargs["link_attributes_by_direction"],
         )
 
         self.check_network_completeness()
 
-        graph_file = kwargs.get("saved_graph")
+        graph_file = kwargs.get("saved_graph", "")
 
-        if os.path.exists(graph_file or ""):
+        if os.path.exists(graph_file):
 
             self.logger.info(f"reading graph from {graph_file}")
             self._graph = ig.Graph.Read(graph_file)
