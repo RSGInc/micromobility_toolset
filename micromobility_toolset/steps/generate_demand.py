@@ -59,7 +59,7 @@ def generate_demand(*scenarios):
 
 def create_trips(scenario, segment, buffered_zones):
     # origin zone trips
-    zone_hh_col = scenario.trip_settings.get("hh_col")
+    zone_hh_col = scenario.zone_settings.get("zone_hh_col")
     zone_cols = scenario.trip_settings.get("trip_gen_zone_coefs")[segment].keys()
     zone_coefs = scenario.trip_settings.get("trip_gen_zone_coefs")[segment].values()
     zone_coefs = np.array(list(zone_coefs))

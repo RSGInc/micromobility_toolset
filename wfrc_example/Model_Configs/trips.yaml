@@ -33,8 +33,6 @@ trip_files:
 
 # Trip Generation
 
-hh_col: households  # to multiply average household-day trips and get total trips
-
 # maximum trip distance between zones
 # cannot be greater than skim_max_dist from network.yaml
 trip_max_dist:
