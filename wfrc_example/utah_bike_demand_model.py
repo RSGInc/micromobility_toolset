@@ -55,7 +55,10 @@ def main():
 
 @preprocessor()
 def preprocess_network(net):
-    """add network attributes that are combinations of existing attributes"""
+    """
+    Add 'bike_cost' network attribute as a combination of existing attributes,
+    including turns.
+    """
 
     distance = net.get_edge_values("distance", dtype="float")
     slope = net.get_edge_values("distance", dtype="float")

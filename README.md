@@ -1,150 +1,77 @@
 # Micromobility Toolset
-This repository contains the software to run several trip generation and network assignment calculations for micro-mobility modes. Test data from the AMBAG bike demand model is provided.
+Welcome to the Micromobility Toolset, built by RSG Inc. in collaboration with [Wasatch Front Regional Council](https://github.com/WFRCAnalytics). This repository contains the software to run several trip generation and network assignment calculations for micro-mobility modes. The latest model specification doc can be found in the root directory of this repository. This document describes the technical design of the model and contains details about calculations, methods, and configuration.
+
+## Quick Start
+
+To quickly get up and running, first ensure Git and Python 3.6 or greater are installed on your computer. Then clone the repository with
+
+```
+git clone https://github.com/RSGInc/micromobility_toolset.git
+```
+
+Navigate to the project folder (`cd micromobility_toolset`) and install the program with
+
+```
+python setup.py install
+```
+
+Run the example model with
+
+```
+cd wfrc_example
+python utah_bike_demand_model.py
+```
+
+Example inputs and configuration files can be found in the `Model_Inputs/` and `Model_Configs/` subdirectories of `wfrc_example/`. Run `python utah_bike_demand_model.py -h` for more information on run options.
+
+Alternatively, the package can be installed with
+
+```
+pip install git+https://github.com/RSGInc/micromobility_toolset.git
+```
+
+## Input data
+Input data for the full Salt Lake regional model can be found at [WFRC's official repository](https://github.com/WFRCAnalytics/utah_bike_demand_model). A smaller version that mirrors the schema and configuration of the full model can be found included in this repository. A detailed list of the input data attributes can be found [here](https://github.com/WFRCAnalytics/utah_bike_demand_model/tree/master/Model_Inputs).
+
+### network
+The network is defined by a link file and a node file containing traffic network attributes.
+
+- **link.csv**:
+- **node.csv**
+
+### zones
+The zones are defined by a single zone table. Additional attributes are necessary for the `generate_demand` step.
+- **zone.csv**
+   - taz: taz number
+   - node_id: network node id
+
+## Configuration
+Configuration files in the ``configs`` directory
+- **zone.yaml** - provides zone input configuration
+- **network.yaml** - configures network inputs and attributes
+- **trips.yaml** - configures demand inputs, mode, and segment coefficients
+
+## Outputs
+
+The program will create the traffic network using the link and node inputs provided and save the graph to the output directory. It will also create the skims (zone-to-zone cost matrices) for each of the link weights specified in the network configuration file. Costs between every zone in the zone file will be calculated, up to a maximum configured value. Each model step will then generate additional outputs using the network and configuration parameters.
 
 ## Model Steps
 
-Each model will use a combination of the provided land-use and network data, along with the configuration coefficients, to produce various outputs. Some of these outputs, like the trip tables from `Generate Demand`, will be used for subsequent model steps. Most steps require a zone level OD matrix to perform their calculations -- if this matrix is not provided as an input, it will be skimmed from the network and saved to the data directory. Subsequent steps will reuse this file in favor of recalculating the OD matrix.
-
-Example for a model with bike and walk modes:
-- **bike_skim** - from_node, to_node, dist
-- **walk_skim** - from_node, to_node, dist
-
-### Initial Demand
-Re-calculate input trip tables using the provided motorized utility OD matrix. This step recalculates the motorized trip utilities for
-the input trip matrices to be used in the incremental demand step.
-
-#### Inputs
-- Trip tables for each market segment/purpose
-- Motorized utility for each segment
-
-#### Outputs
-- Re-calculated trip tables
+When first running the model, the program will first build a graph representation of the traffic network using the given link and node input files. Each model will then use a combination of the provided land-use and network data, along with the configuration coefficients, to produce various outputs. Some of these outputs, like the trip tables from `Generate Demand`, will be used for subsequent model steps. Most steps require a zone level OD matrix to perform their calculations -- if this matrix is not provided as an input, it will be skimmed from the network and saved to the output directory. Subsequent steps will reuse this file in favor of recalculating the OD matrix.
 
 ### Generate Demand
-Generate OD trip tables from scratch for various market segments/purposes using network skims and landuse data.
+Generate OD trip tables for various market segments/purposes using network skims and landuse data.
 
-#### Inputs
-- Landuse and network files (see **Input Data** below)
+Outputs:
 
-#### Outputs
-- Trip tables by segment (see **Demand** below)
+- Trip tables by segment
 - **buffered_zones.csv** - A buffered version of the land use file
 - **zone_production_size.csv** - A zone-indexed file with the number of trips produced per household (for each segment)
 - **zone_attraction_size.csv** - The attraction size measure for each zone (for each segment)
 
-### Incremental Demand
-Given a set of base scenario trips, calculate build scenario trips from build network.
-
-### Benefits
-Calculate difference in emissions benefits between two scenarios.
-
-#### Outputs
-- **chg_emissions** - from_node, to_node, [emissions columns]
-- **chg_trips** - from_node, to_node, [trips by mode columns]
-- **chg_vmt** - from_node, to_node, vehicle miles traveled
-- **user_ben** - from_node, to_node, minutes of user benefits
-
 ### Assign Demand
 Assign trips to road network links and calculate traffic volume.
 
-#### Outputs
-- **bike_vol** - from_node, to_node, bike_vol
+Outputs:
 
-
-## How to run the AMBAG example
-
-The AMBAG model uses the `incremental_demand`, `benefits`, and `assign_demand` steps to compare a base scenario and a build scenario.
-
-1. Clone this repository.
-2. Run incremental demand:
-   ```
-   python ambag_bike_model.py --name incremental_demand
-   ```
-3. Quantify benefits of the changes:
-   ```
-   python ambag_bike_model.py --name benefits
-   ```
-4. Assign changed demand counts to the network:
-   ```
-   python ambag_bike_model.py --name assign_demand
-   ```
-
-All steps may be run at once by leaving off the ``--name`` flag:
-```
-python ambag_bike_model.py
-```
-
-The network skims may also be generated separately from the model steps:
-```
-python ambag_bike_model.py --name skim_network
-```
-Note: skims are generated on-the-fly during the main model steps and the
-``skim_network`` step does not need to be run beforehand.
-
-## Input data
-Input data may be in either CSV or SQLite format. The full test database for AMBAG (SQLite) is available
-[here](https://resourcesystemsgroupinc-my.sharepoint.com/:u:/g/personal/ben_stabler_rsginc_com1/EftgpjU25WxKvET6Tmy39tkBRGJZmSeqlyblvzauJ2Iv0w?e=Tfl2nf).
-
-The 25-zone example data (CSV) can be found in ``ambag_example/base/`` and ``ambag_example/build/``. Both datasets contain the
-following inputs:
-
-### auto skim
-Time and distance between zones for calculating change in `benefits` step only.
-- **auto_skim** - i, j, time, dist
-
-### network
-The network is defined by a link file and a node file for all scenarios. The columns found in the AMBAG example inputs are listed here:
-scenarios:
-- **link**:
-   - link_type: TWO LANE, MULTILANE, RAMP, FREEWAY, BIKE, PATH, CENTROID C, SHUTTLE
-   - length: link length
-   - fhwa_fc: FHWA functional class
-   - ab_ln: lanes in forward dir
-   - ba_ln: lanes in reverse dir
-   - area_type: zone area type measure
-   - ff_speed: free-flow speed
-   - bike_class: 0-4
-   - ab_gain: elevation gain in forward dir
-   - ba_gain: elevation gain in reverse dir
-   - ab_ivt: in-vehicle time in forward dir
-   - ba_ivt: in-vehicle time in reverse dir
-- **node**
-   - node id: node id
-   - x_coord: x coordinate
-   - y_coord: y coordinate
-   - z_coord: z coordinate
-
-### zones
-The zones are defined by a single zone table. Additional attributes are necessary for the `generate_demand` step.
-- **zone**
-   - taz: taz number
-   - node_id: network node id
-
-### demand
-Each table indexed by an origin and destination column, and contains initial zone-to-zone demand by mode. These tables can be generated by the 'generate_demand' step and are used as inputs for 'incremental_demand', 'benefits' and 'assign_demand'. Trip file names can be configured in `trips.yaml` according to the model's segments/purposes. The names and columns for the AMBAG example are given here:
-- **hbw1trip** - home-based-work 1 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hbw2trip** - home-based-work 2 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hbw3trip** - home-based-work 3 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hbw4trip** - home-based-work 4 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hscl1trip** - home-based-school 1 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hscl2trip** - home-based-school 2 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hscl3trip** - home-based-school 3 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hscl4trip** - home-based-school 4 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hunv1trip** - home-based-univ 1 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hunv2trip** - home-based-univ 2 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hunv3trip** - home-based-univ 3 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **hunv4trip** - home-based-univ 4 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **nhbtrip** - non-home-based trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **nwk1trip** - non-work 1 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **nwk2trip** - non-work 2 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **nwk3trip** - non-work 3 rips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-- **nwk4trip** - non-work 4 trips, pzone, azone, da, s2, s3, wt, dt, wk, bk
-
-Each demand table also has a corresponding motorized utility table to be used in the
-"initial demand" step.
-
-### configs
-Additional configuration files in the ``configs`` directory
-- **zone.yaml** - provides zone input configuration
-- **network.yaml** - configures network inputs and attributes
-- **trips.yaml** - configures demand inputs, mode, and segment coefficients
+- **bike_vol** - from_node, to_node, volume
