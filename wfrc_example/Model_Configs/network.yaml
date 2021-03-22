@@ -42,4 +42,5 @@ skim_dist_col: distance  # shortest network distance between zones
 skim_max_cost: 7.5  # maximum cost to save in skims
 
 skim_weights:
-    - bike_cost
+    - bike_commute
+    - bike_non_commute

@@ -150,8 +150,7 @@ def _read_dataframe(file_path, index_col, table_name=None):
 
 
 class Settings:
-    """Helper class to ensure every '.get' from a config dictionary is valid
-    """
+    """Helper class to ensure every '.get' from a config dictionary is valid"""
 
     def __init__(self, file_path):
 

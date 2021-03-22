@@ -47,14 +47,14 @@ trip_max_dist:
 
 # link attribute to calculate shortest path weight
 trip_cost_attr:
-    rec_long: bike_cost
-    rec_fam: bike_cost
-    rec_oth: bike_cost
-    work: bike_cost
-    sch_grade: bike_cost
-    sch_univ: bike_cost
-    maint: bike_cost
-    disc: bike_cost
+    rec_long: bike_commute
+    rec_fam: bike_non_commute
+    rec_oth: bike_non_commute
+    work: bike_commute
+    sch_grade: bike_non_commute
+    sch_univ: bike_non_commute
+    maint: bike_non_commute
+    disc: bike_non_commute
 
 # number of household-day trips intercept, by segment
 trip_gen_consts:

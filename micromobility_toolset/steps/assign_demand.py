@@ -13,37 +13,47 @@ def assign_demand(*scenarios):
 
     for scenario in scenarios:
 
-        total_demand = np.zeros((scenario.num_zones, scenario.num_zones))
+        cost_map = scenario.trip_settings.get("trip_cost_attr")
+        cost_attrs = list(set(list(cost_map.values())))
 
-        for segment in scenario.trip_settings.get("segments"):
+        for cost_attr in cost_attrs:
 
-            bike_trips = scenario.load_trip_matrix(segment)
-            assert bike_trips.ndim == 2, f"bike trips have shape {bike_trips.shape}"
+            total_demand = np.zeros((scenario.num_zones, scenario.num_zones))
 
-            if f"{segment}_nhb" in scenario.trip_settings.get("trip_files"):
+            for segment in scenario.trip_settings.get("segments"):
 
-                nhb_trips = scenario.load_trip_matrix(f"{segment}_nhb")
-                bike_trips += nhb_trips
+                if cost_attr != cost_map[segment]:
+                    continue
 
-            scenario.logger.info(f"{segment} trips: {round(np.sum(bike_trips), 2)}")
+                scenario.logger.debug(f"adding {segment} demand to {cost_attr} sums")
+                bike_trips = scenario.load_trip_matrix(segment)
 
-            total_demand = total_demand + bike_trips
+                if f"{segment}_nhb" in scenario.trip_settings.get("trip_files"):
 
-        scenario.logger.info(f"trip sum: {int(np.sum(total_demand))}")
+                    nhb_trips = scenario.load_trip_matrix(f"{segment}_nhb")
+                    bike_trips += nhb_trips
 
-        scenario.logger.info("assigning trips to network...")
+                scenario.logger.info(f"{segment} trips: {round(np.sum(bike_trips), 2)}")
 
-        scenario.load_network_sums(
-            attributes=total_demand,
-            cost_attr="bike_cost",  # TODO: parameterize
-            load_name="bike_vol",
-        )
+                total_demand = total_demand + bike_trips
 
-        link_df = scenario.network.get_link_attributes(["bike_vol", "distance"])
+            scenario.logger.info(f"{cost_attr} trip sum: {int(np.sum(total_demand))}")
+
+            scenario.logger.info(f"assigning {cost_attr} trips to network...")
+
+            scenario.load_network_sums(
+                attributes=total_demand,
+                cost_attr=cost_attr,
+                load_name=f"{cost_attr}_vol",
+            )
+
+        vol_cols = [f"{attr}_vol" for attr in cost_attrs]
+        link_df = scenario.network.get_link_attributes(vol_cols + ["distance"])
+        link_df["bike_vol"] = link_df[vol_cols].sum(axis=1)
         link_df = link_df[link_df.bike_vol != 0]
         bmt = (link_df["bike_vol"] * link_df["distance"]).sum()
         scenario.logger.info(f"bike miles traveled: {int(bmt)}")
 
         scenario.logger.info("writing results to bike_vol.csv...")
-        link_df["bike_vol"].to_csv(scenario.data_file_path("bike_vol.csv"))
+        link_df.bike_vol.to_csv(scenario.data_file_path("bike_vol.csv"))
         scenario.logger.info("done.")
