@@ -61,7 +61,7 @@ def preprocess_network(net):
     """
 
     distance = net.get_edge_values("distance", dtype="float")
-    slope = net.get_edge_values("distance", dtype="float")
+    slope = net.get_edge_values("slope", dtype="float")
     bike_blvd = net.get_edge_values("bike_boulevard", dtype="bool")
     bike_path = net.get_edge_values("bike_path", dtype="bool")
     bike_lane = net.get_edge_values("bike_lane", dtype="bool")
