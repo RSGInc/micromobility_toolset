@@ -87,9 +87,15 @@ def create_trips(scenario, segment, buffered_zones):
 def distribute_trips(scenario, segment, orig_trips, dest_size):
 
     max_dist = scenario.trip_settings.get("trip_max_dist")[segment]
-    dest_avail = (scenario.distance_skim > 0) * (
+    min_dist = scenario.trip_settings.get("trip_min_dist").get(segment, 0)
+
+    dest_avail = (scenario.distance_skim > min_dist) * (
         scenario.distance_skim < max_dist
-    ) + np.diag(np.ones(scenario.num_zones))
+    )
+
+    # include intrazonal trips
+    if min_dist == 0:
+        np.fill_diagonal(dest_avail, True)
 
     intrazonal = np.diag(
         np.ones(scenario.num_zones)

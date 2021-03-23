@@ -36,14 +36,19 @@ trip_files:
 # maximum trip distance between zones
 # cannot be greater than skim_max_dist from network.yaml
 trip_max_dist:
-    rec_long: 7.5
+    rec_long: 10
     rec_fam: 5.0
     rec_oth: 5.0
-    work: 5.0
+    work: 7.5
     sch_grade: 5.0
     sch_univ: 5.0
     maint: 5.0
     disc: 5.0
+
+# minimum trip distance
+# defaults to 0
+trip_min_dist:
+    rec_long: 5.0
 
 # link attribute to calculate shortest path weight
 trip_cost_attr:

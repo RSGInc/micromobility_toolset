@@ -403,7 +403,7 @@ class Network:
 
             weights[weights == None] = np.nan  # noqa
 
-        return weights.astype(dtype)
+        return np.nan_to_num(weights.astype(dtype))
 
     def set_edge_values(self, attr, weights):
 
