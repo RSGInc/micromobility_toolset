@@ -341,10 +341,12 @@ class Network:
         missing_nodes = link_nodes - node_nodes
 
         if stray_nodes:
-            self.node_df = self.node_df[
-                ~self.node_df[self.node_name].isin(list(stray_nodes))
-            ]
-            self.logger.info(f"removed {len(stray_nodes)} stray nodes from network")
+            # self.node_df = self.node_df[
+            #     ~self.node_df[self.node_name].isin(list(stray_nodes))
+            # ]
+            # self.logger.info(f"removed {len(stray_nodes)} stray nodes from network")
+
+            self.logger.info(f"network contains {len(stray_nodes)} stray nodes")
 
         if missing_nodes:
             raise Exception(
@@ -425,9 +427,13 @@ class Network:
         self.set_edge_values(cost_attr, np.nan_to_num(weights))
 
         # remove duplicate node_ids
-        nodes_uniq = list(set(list(map(float, node_ids))))
+        nodes_uniq = np.unique(node_ids).astype(np.int)
 
-        vertex_names = np.array(self._graph.vs["name"], dtype=np.float)
+        vertex_names = np.array(self._graph.vs["name"])
+        vertex_names = vertex_names[vertex_names != None].astype(np.int)
+
+        assert np.isin(nodes_uniq, vertex_names).all(), "graph is missing some nodes"
+
         vertex_ids = np.searchsorted(vertex_names, nodes_uniq)
 
         costs = self._graph.shortest_paths(
@@ -435,7 +441,7 @@ class Network:
         )
 
         # expand skim to match original node_ids
-        node_map = [nodes_uniq.index(int(n)) for n in node_ids]
+        node_map = np.searchsorted(nodes_uniq, node_ids, sorter=np.argsort(nodes_uniq))
         skim_matrix = np.array(costs)[:, node_map][node_map, :]
 
         if max_cost:
