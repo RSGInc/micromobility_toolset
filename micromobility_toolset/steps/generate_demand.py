@@ -126,7 +126,8 @@ def distribute_trips(scenario, segment, orig_trips, dest_size):
     # non-home-based trips
     nhb_factor = scenario.trip_settings.get("nhb_factor").get(segment)
     if nhb_factor:
-        nhb_orig_trips = np.sum(bike_trips, axis=1) * nhb_factor
+        # home-based trip destinations become nhb origins
+        nhb_orig_trips = np.sum(bike_trips, axis=0) * nhb_factor
         nhb_bike_trips = nhb_orig_trips.reshape(-1, 1) * dc_frac
 
         scenario.logger.info(
