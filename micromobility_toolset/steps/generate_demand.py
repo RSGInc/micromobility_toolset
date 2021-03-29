@@ -86,7 +86,7 @@ def create_trips(scenario, segment, buffered_zones):
 
 def distribute_trips(scenario, segment, orig_trips, dest_size):
 
-    max_dist = scenario.trip_settings.get("trip_max_dist")[segment]
+    max_dist = scenario.trip_settings.get("trip_max_dist").get(segment, np.inf)
     min_dist = scenario.trip_settings.get("trip_min_dist").get(segment, 0)
 
     dest_avail = (scenario.distance_skim > min_dist) * (
@@ -109,7 +109,7 @@ def distribute_trips(scenario, segment, orig_trips, dest_size):
         + scenario.trip_settings.get("bike_asc")[segment]
     )
 
-    bike_util = np.log(dest_size + 1) + gen_cost
+    bike_util = np.log(dest_size) + gen_cost
     bike_util = np.exp(bike_util - 999 * (1 - dest_avail))
 
     # destination-choice fraction
