@@ -34,18 +34,7 @@ def generate_demand(*scenarios):
             # save segment trips to production df
             trip_gen_df[segment] = orig_trips
 
-            dest_cols = scenario.trip_settings.get("dest_choice_coefs")[segment].keys()
-            dest_coefs = scenario.trip_settings.get("dest_choice_coefs")[
-                segment
-            ].values()
-            dest_coefs = np.array(list(dest_coefs))
-            dest_vals = scenario.zone_df[dest_cols].values
-
-            dest_size = np.sum(dest_vals * dest_coefs, axis=1)
-            dest_size[dest_size < 0] = 0
-
-            # save segment values to attraction df
-            dest_size_df[segment] = dest_size
+            dest_size = calc_dest_size(scenario, segment, dest_size_df)
 
             distribute_trips(scenario, segment, orig_trips, dest_size)
 
@@ -59,6 +48,19 @@ def generate_demand(*scenarios):
 
 def create_trips(scenario, segment, buffered_zones):
     # origin zone trips
+
+    nhb_factor = scenario.trip_settings.get("trip_gen_nhb_factor").get(segment)
+    if nhb_factor:
+
+        reference_trips = scenario.load_trip_matrix(nhb_factor["segment"])
+
+        # home-based trip destinations become nhb origins
+        orig_trips = (
+            np.sum(reference_trips, axis=nhb_factor["axis"]) * nhb_factor["coef"]
+        )
+
+        return orig_trips
+
     zone_hh_col = scenario.zone_settings.get("zone_hh_col")
     zone_cols = scenario.trip_settings.get("trip_gen_zone_coefs")[segment].keys()
     zone_coefs = scenario.trip_settings.get("trip_gen_zone_coefs")[segment].values()
@@ -82,6 +84,29 @@ def create_trips(scenario, segment, buffered_zones):
     orig_trips = orig_trips * scenario.zone_df[zone_hh_col].values
 
     return orig_trips
+
+
+def calc_dest_size(scenario, segment, dest_size_df):
+
+    reuse = scenario.trip_settings.get("reuse_dest_size").get(segment)
+    if reuse:
+
+        dest_size = dest_size_df[reuse].values
+
+        return dest_size
+
+    dest_cols = scenario.trip_settings.get("dest_choice_zone_coefs")[segment].keys()
+    dest_coefs = scenario.trip_settings.get("dest_choice_zone_coefs")[segment].values()
+    dest_coefs = np.array(list(dest_coefs))
+    dest_vals = scenario.zone_df[dest_cols].values
+
+    dest_size = np.sum(dest_vals * dest_coefs, axis=1)
+    dest_size[dest_size < 0] = 0
+
+    # save segment values to attraction df
+    dest_size_df[segment] = dest_size
+
+    return dest_size
 
 
 def distribute_trips(scenario, segment, orig_trips, dest_size):
@@ -119,19 +144,6 @@ def distribute_trips(scenario, segment, orig_trips, dest_size):
     # allocate orig trips to destinations
     bike_trips = orig_trips.reshape(-1, 1) * dc_frac
 
-    scenario.logger.info(f"{segment} home-based trips: {int(np.sum(bike_trips))}")
+    scenario.logger.info(f"{segment} trips: {int(np.sum(bike_trips))}")
 
     scenario.save_trip_matrix(bike_trips, segment)
-
-    # non-home-based trips
-    nhb_factor = scenario.trip_settings.get("nhb_factor").get(segment)
-    if nhb_factor:
-        # home-based trip destinations become nhb origins
-        nhb_orig_trips = np.sum(bike_trips, axis=0) * nhb_factor
-        nhb_bike_trips = nhb_orig_trips.reshape(-1, 1) * dc_frac
-
-        scenario.logger.info(
-            f"{segment} non-home-based trips: {int(np.sum(nhb_bike_trips))}"
-        )
-
-        scenario.save_trip_matrix(nhb_bike_trips, f"{segment}_nhb")
