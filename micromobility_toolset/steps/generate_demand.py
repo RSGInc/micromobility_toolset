@@ -49,14 +49,14 @@ def generate_demand(*scenarios):
 def create_trips(scenario, segment, buffered_zones):
     # origin zone trips
 
-    nhb_factor = scenario.trip_settings.get("trip_gen_nhb_factor").get(segment)
-    if nhb_factor:
+    sum_factor = scenario.trip_settings.get("trip_gen_sum_factor").get(segment)
+    if sum_factor:
 
-        reference_trips = scenario.load_trip_matrix(nhb_factor["segment"])
+        reference_trips = scenario.load_trip_matrix(sum_factor["segment"])
 
         # home-based trip destinations become nhb origins
         orig_trips = (
-            np.sum(reference_trips, axis=nhb_factor["axis"]) * nhb_factor["coef"]
+            np.sum(reference_trips, axis=sum_factor["axis"]) * sum_factor["coef"]
         )
 
         return orig_trips
