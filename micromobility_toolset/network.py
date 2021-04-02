@@ -426,11 +426,12 @@ class Network:
         weights = self.get_edge_values(cost_attr, dtype=np.float)
         self.set_edge_values(cost_attr, np.nan_to_num(weights))
 
-        # remove duplicate node_ids
-        nodes_uniq = np.unique(node_ids).astype(np.int)
+        # remove duplicate node_ids and save reconstruction indices
+        node_ids = np.array(node_ids).astype(np.int)
+        nodes_uniq, node_map = np.unique(node_ids, return_inverse=True)
 
         vertex_names = np.array(self._graph.vs["name"])
-        vertex_names = vertex_names[vertex_names != None].astype(np.int)
+        vertex_names = vertex_names[vertex_names != None].astype(np.int)  # noqa
 
         assert np.isin(nodes_uniq, vertex_names).all(), "graph is missing some nodes"
 
@@ -441,7 +442,6 @@ class Network:
         )
 
         # expand skim to match original node_ids
-        node_map = np.searchsorted(nodes_uniq, node_ids, sorter=np.argsort(nodes_uniq))
         skim_matrix = np.array(costs)[:, node_map][node_map, :]
 
         if max_cost:
