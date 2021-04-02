@@ -454,19 +454,20 @@ class Network:
         if not isinstance(link_attrs, list):
 
             link_attrs = [link_attrs]
-        # add new column to link_df
 
         data = {
-            self.link_from_node: self._graph.es[self.link_from_node],
-            self.link_to_node: self._graph.es[self.link_to_node],
+            self.link_from_node: self.get_edge_values(self.link_from_node),
+            self.link_to_node: self.get_edge_values(self.link_to_node),
         }
 
         for attr in link_attrs:
 
-            data[attr] = self._graph.es[attr]
+            data[attr] = self.get_edge_values(attr)
 
-        return (
-            pd.DataFrame(data)
-            .set_index([self.link_from_node, self.link_to_node])
-            .dropna()
-        )
+        links_df = pd.DataFrame(data)
+        links_df = links_df[(links_df != 0).any(axis=1)].dropna()
+        links_df[[self.link_from_node, self.link_to_node]] = links_df[
+            [self.link_from_node, self.link_to_node]
+        ].astype(np.int)
+
+        return links_df.set_index([self.link_from_node, self.link_to_node])
