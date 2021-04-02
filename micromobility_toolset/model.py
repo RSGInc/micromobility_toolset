@@ -353,6 +353,23 @@ class Scenario:
 
         return list(nodes)
 
+    def duplicate_nodes(self):
+        """
+        determines zone-to-zone pairs that share the same node ID,
+        excluding intrazonal pairs
+        """
+
+        nodes = np.array(self.zone_nodes)
+        dups = np.outer(nodes, 1 / nodes) == 1.0
+        np.fill_diagonal(dups, False)
+
+        self.logger.info(
+            f"zones contain {np.count_nonzero(dups)} "
+            "non-intrazonal pairs with identical node IDs"
+        )
+
+        return np.where(dups)
+
     @cache
     def zone_list(self):
         return list(self.zone_df.index)

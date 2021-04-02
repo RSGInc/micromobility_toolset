@@ -23,6 +23,12 @@ def generate_demand(*scenarios):
         trip_gen_df = pd.DataFrame(index=scenario.zone_list)
         dest_size_df = pd.DataFrame(index=scenario.zone_list)
 
+        dup_node_idxs = scenario.duplicate_nodes()
+        zone_array = np.array(scenario.zone_list)
+        from_zones = zone_array[dup_node_idxs[0]]
+        to_zones = zone_array[dup_node_idxs[1]]
+        duplicates_df = pd.DataFrame(index=[from_zones, to_zones])
+
         for measure in scenario.zone_settings.get("buffer_cols"):
             zone_col = scenario.zone_df[measure].values
             buffered_zones[measure] = np.sum(zone_col * zone_buffer, axis=0)
@@ -35,14 +41,22 @@ def generate_demand(*scenarios):
             trip_gen_df[segment] = orig_trips
 
             dest_size = calc_dest_size(scenario, segment, dest_size_df)
+            bike_trips = distribute_trips(scenario, segment, orig_trips, dest_size)
 
-            distribute_trips(scenario, segment, orig_trips, dest_size)
+            duplicates_df[segment] = bike_trips[dup_node_idxs]
+
+            scenario.save_trip_matrix(bike_trips, segment)
 
         # finally, save intermediate calculations to disk
         buffered_zones.round(4).to_csv(scenario.data_file_path("buffered_zones.csv"))
         trip_gen_df.round(4).to_csv(scenario.data_file_path("zone_production_size.csv"))
         dest_size_df.round(4).to_csv(
             scenario.data_file_path("zone_attraction_size.csv")
+        )
+        duplicates_df.round(4).to_csv(scenario.data_file_path("non_network_trips.csv"))
+
+        scenario.logger.info(
+            f"non-network trip count: {int(duplicates_df.sum().sum())}"
         )
 
 
@@ -146,4 +160,4 @@ def distribute_trips(scenario, segment, orig_trips, dest_size):
 
     scenario.logger.info(f"{segment} trips: {int(np.sum(bike_trips))}")
 
-    scenario.save_trip_matrix(bike_trips, segment)
+    return bike_trips
