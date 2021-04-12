@@ -31,7 +31,7 @@ def generate_demand(*scenarios):
 
         for measure in scenario.zone_settings.get("buffer_cols"):
             zone_col = scenario.zone_df[measure].values
-            buffered_zones[measure] = np.sum(zone_col * zone_buffer, axis=0)
+            buffered_zones[measure] = np.sum(zone_col * zone_buffer, axis=1)
 
         for segment in scenario.trip_settings.get("segments"):
 
