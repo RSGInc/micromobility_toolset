@@ -17,6 +17,8 @@ def generate_demand(*scenarios):
 
         buffer_dist = scenario.zone_settings.get("buffer_dist")
         zone_buffer = 1 / (1 + np.exp(4 * (scenario.distance_skim - buffer_dist / 2)))
+        zone_buffer[scenario.distance_skim == 0] = 0
+        np.fill_diagonal(zone_buffer, 1.0)
 
         # initialize dataframes
         buffered_zones = pd.DataFrame(index=scenario.zone_list)
