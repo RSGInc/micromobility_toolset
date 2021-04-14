@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="micromobility_toolset",
-    version="0.3",
+    version="0.3.1",
     description="Micromobility Travel Modeling Toolkit",
     author="contributing authors",
     author_email="blake.rosenthal@rsginc.com",
