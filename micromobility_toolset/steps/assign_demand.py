@@ -28,11 +28,6 @@ def assign_demand(*scenarios):
                 scenario.logger.debug(f"adding {segment} demand to {cost_attr} sums")
                 bike_trips = scenario.load_trip_matrix(segment)
 
-                if f"{segment}_nhb" in scenario.trip_settings.get("trip_files"):
-
-                    nhb_trips = scenario.load_trip_matrix(f"{segment}_nhb")
-                    bike_trips += nhb_trips
-
                 scenario.logger.info(f"{segment} trips: {round(np.sum(bike_trips), 2)}")
 
                 total_demand = total_demand + bike_trips
