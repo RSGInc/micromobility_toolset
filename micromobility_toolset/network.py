@@ -125,6 +125,13 @@ def add_turn_edges(graph, node_x_name, node_y_name):
     turn_node_idxs = list(set([edge.source for edge in turns]))
     turn_nodes = graph.vs[turn_node_idxs]
 
+    # it's expensive to modify igraph object, so store all changes in lists and modify all at once
+    # instantiate lists for each attribute that will be changed
+    all_leg_idx = []
+    all_turn_types = []
+    all_aadt = []
+    all_cross_aadt = []
+
     for node in turn_nodes:
 
         in_edges = node.in_edges()
@@ -177,11 +184,22 @@ def add_turn_edges(graph, node_x_name, node_y_name):
                         turn_types.append("left")
                     else:
                         turn_types.append("straight")
+        
+        all_leg_idx.append([leg.index for leg in legs])
+        all_turn_types.append(turn_types)
+        all_aadt.append(aadt)
+        all_cross_aadt.append([max(aadt) * len(aadt)])
 
-        leg_idxs = [leg.index for leg in legs]
-        graph.es[leg_idxs]["turn_type"] = turn_types
-        graph.es[leg_idxs]["parallel_aadt"] = aadt
-        graph.es[leg_idxs]["cross_aadt"] = max(aadt)
+    # flatten lists
+    all_leg_idx = [item for sublist in all_leg_idx for item in sublist]
+    all_turn_types = [item for sublist in all_turn_types for item in sublist]
+    all_aadt = [item for sublist in all_aadt for item in sublist]
+    all_cross_aadt = [item for sublist in all_cross_aadt for item in sublist]
+
+    # replace edge attributes in graph
+    graph.es[all_leg_idx]["turn_type"] = all_turn_types
+    graph.es[all_leg_idx]["parallel_aadt"] = all_aadt
+    graph.es[all_leg_idx]["cross_aadt"] = all_cross_aadt
 
 
 def explode(graph, nodes):
@@ -315,7 +333,7 @@ class Network:
             if PREPROCESSORS:
                 for func in PREPROCESSORS:
                     self.logger.info(f"running {func.__name__}")
-                    func(self)
+                    func(self, kwargs)
                     self.logger.info("done.")
 
             if graph_file:
@@ -359,13 +377,15 @@ class Network:
         # first two link columns need to be from/to nodes and
         # first node column must be node name.
         # igraph expects vertex ids to be strings
-        self.link_df[[self.link_from_node, self.link_to_node]] = self.link_df[
-            [self.link_from_node, self.link_to_node]
-        ].astype(str)
+        #self.link_df[[self.link_from_node, self.link_to_node]] = self.link_df[
+        #    [self.link_from_node, self.link_to_node]
+        #].astype(str)
 
-        self.node_df[self.node_name] = self.node_df[self.node_name].astype(str)
+        #self.node_df[self.node_name] = self.node_df[self.node_name].astype(str)
 
         link_cols = list(self.link_df.columns)
+        link_cols.remove("from_node")
+        link_cols.remove("to_node")
         link_cols.insert(0, self.link_to_node)
         link_cols.insert(0, self.link_from_node)
 
@@ -377,7 +397,7 @@ class Network:
         node_df = self.node_df[node_cols]
 
         self.logger.info("building graph... ")
-        graph = ig.Graph.DataFrame(edges=link_df, vertices=node_df, directed=True)
+        graph = ig.Graph.DataFrame(edges=link_df,vertices=node_df, directed=True, use_vids=False)
 
         self.logger.info("done.")
 
@@ -445,9 +465,15 @@ class Network:
         skim_matrix = np.array(costs)[:, node_map][node_map, :]
 
         if max_cost:
-            skim_matrix[skim_matrix > max_cost] = 0
 
-        return skim_matrix
+            # when geenrating distance skims, create truncated matrix
+            if cost_attr == "distance":
+                truncated = skim_matrix > max_cost
+
+            # otherwise, uss supplied matrix to truncate skims
+            skim_matrix[truncated] = 0
+
+        return skim_matrix.astype(np.float32), truncated # float 32 is precise enough
 
     def get_link_attributes(self, link_attrs):
 
