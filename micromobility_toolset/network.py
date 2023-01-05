@@ -376,13 +376,6 @@ class Network:
 
         # first two link columns need to be from/to nodes and
         # first node column must be node name.
-        # igraph expects vertex ids to be strings
-        #self.link_df[[self.link_from_node, self.link_to_node]] = self.link_df[
-        #    [self.link_from_node, self.link_to_node]
-        #].astype(str)
-
-        #self.node_df[self.node_name] = self.node_df[self.node_name].astype(str)
-
         link_cols = list(self.link_df.columns)
         link_cols.remove("from_node")
         link_cols.remove("to_node")
@@ -397,7 +390,7 @@ class Network:
         node_df = self.node_df[node_cols]
 
         self.logger.info("building graph... ")
-        graph = ig.Graph.DataFrame(edges=link_df,vertices=node_df, directed=True, use_vids=False)
+        graph = ig.Graph.DataFrame(edges=link_df, vertices=node_df, directed=True, use_vids=False)
 
         self.logger.info("done.")
 
