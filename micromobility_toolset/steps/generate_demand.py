@@ -138,27 +138,22 @@ def distribute_trips(scenario, segment, orig_trips, dest_size):
     if min_dist == 0:
         np.fill_diagonal(dest_avail, True)
 
-    intrazonal = np.diag(
-        np.ones(scenario.num_zones)
-        * scenario.trip_settings.get("bike_intrazonal")[segment]
-    )
-
     cost_attr = scenario.trip_settings.get("trip_cost_attr")[segment]
     gen_cost = (
-        scenario.skims.get_core(cost_attr)
-        + intrazonal
+        - scenario.skims.get_core(cost_attr).astype(np.float32)
+        + np.diag(np.full(scenario.num_zones, scenario.trip_settings.get("bike_intrazonal")[segment])).astype(np.float32)  # intrazonals
         + scenario.trip_settings.get("bike_asc")[segment]
-    )
+    ).astype(np.float32)
 
-    bike_util = np.log(dest_size) + gen_cost
+    bike_util = (np.log(dest_size) + gen_cost).astype(np.float32)
     bike_util = np.exp(bike_util - 999 * (1 - dest_avail))
 
     # destination-choice fraction
-    dc_frac = np.nan_to_num(bike_util / np.sum(bike_util, axis=1).reshape(-1, 1))
-    # print(np.sum(dc_frac, axis=1))  # should be all ones
+    dc_frac = np.nan_to_num(bike_util / np.sum(bike_util, axis=1).reshape(-1, 1)).astype(np.float32)
+    #print(np.sum(dc_frac, axis=1))  # should be all ones
 
     # allocate orig trips to destinations
-    bike_trips = orig_trips.reshape(-1, 1) * dc_frac
+    bike_trips = (orig_trips.reshape(-1, 1) * dc_frac).astype(np.float32)
 
     scenario.logger.info(f"{segment} trips: {int(np.sum(bike_trips))}")
 
