@@ -399,7 +399,7 @@ class Scenario:
         # TODO: convert Nones to nans a bit more gracefully
         zone_nodes = np.array(self.zone_nodes).astype(float)
         graph_nodes = np.searchsorted(
-            np.array(self.network._graph.vs["name"], dtype=np.float), zone_nodes
+            np.array(self.network._graph.vs["name"], dtype=np.float32), zone_nodes
         )
 
         self.network.set_edge_values(load_name, 0)
