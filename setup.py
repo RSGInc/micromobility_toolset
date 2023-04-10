@@ -13,11 +13,12 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     packages=find_packages(),
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     install_requires=[
-        "numpy >= 1.16.1",
-        "pandas >= 1.0.1",
-        "pyyaml >= 5.3.1",
-        "python-igraph == 0.8.3",
+        "pandas >= 1.5",
+        "pyarrow",
+        "numpy >= 1.24.1",
+        "pyyaml",
+        "python-igraph",
     ],
 )

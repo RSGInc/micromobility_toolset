@@ -3,7 +3,7 @@ Welcome to the Micromobility Toolset, built by RSG Inc. in collaboration with [W
 
 ## Quick Start
 
-To quickly get up and running, first ensure Git and Python 3.6 or greater are installed on your computer. Then clone the repository with
+To quickly get up and running, first ensure Git and Python 3.8 or greater are installed on your computer. Then clone the repository with
 
 ```
 git clone https://github.com/RSGInc/micromobility_toolset.git

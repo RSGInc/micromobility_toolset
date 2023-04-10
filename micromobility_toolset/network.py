@@ -377,8 +377,6 @@ class Network:
         # first two link columns need to be from/to nodes and
         # first node column must be node name.
         link_cols = list(self.link_df.columns)
-        link_cols.remove("from_node")
-        link_cols.remove("to_node")
         link_cols.insert(0, self.link_to_node)
         link_cols.insert(0, self.link_from_node)
 
@@ -431,20 +429,20 @@ class Network:
 
         self._graph.es[attr] = weights
 
-    def get_skim_matrix(self, node_ids, cost_attr, max_cost=None):
+    def get_skim_matrix(self, node_ids, cost_attr, truncated=None, max_cost=None):
         """skim network net starting from node_id to node_id, using specified
         edge weights. Zero-out entries above max_cost, return matrix
         """
 
-        weights = self.get_edge_values(cost_attr, dtype=np.float)
+        weights = self.get_edge_values(cost_attr, dtype=np.float32)
         self.set_edge_values(cost_attr, np.nan_to_num(weights))
 
         # remove duplicate node_ids and save reconstruction indices
-        node_ids = np.array(node_ids).astype(np.int)
+        node_ids = np.array(node_ids).astype(np.int64)
         nodes_uniq, node_map = np.unique(node_ids, return_inverse=True)
 
         vertex_names = np.array(self._graph.vs["name"])
-        vertex_names = vertex_names[vertex_names != None].astype(np.int)  # noqa
+        vertex_names = vertex_names[vertex_names != None].astype(np.int64)  # noqa
 
         assert np.isin(nodes_uniq, vertex_names).all(), "graph is missing some nodes"
 
@@ -487,6 +485,6 @@ class Network:
         links_df = links_df[(links_df != 0).any(axis=1)].dropna()
         links_df[[self.link_from_node, self.link_to_node]] = links_df[
             [self.link_from_node, self.link_to_node]
-        ].astype(np.int)
+        ].astype(np.int64)
 
         return links_df.set_index([self.link_from_node, self.link_to_node])
