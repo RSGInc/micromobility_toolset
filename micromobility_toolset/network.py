@@ -125,6 +125,13 @@ def add_turn_edges(graph, node_x_name, node_y_name):
     turn_node_idxs = list(set([edge.source for edge in turns]))
     turn_nodes = graph.vs[turn_node_idxs]
 
+    # it's expensive to modify igraph object, so store all changes in lists and modify all at once
+    # instantiate lists for each attribute that will be changed
+    all_leg_idx = []
+    all_turn_types = []
+    all_aadt = []
+    all_cross_aadt = []
+
     for node in turn_nodes:
 
         in_edges = node.in_edges()
@@ -177,11 +184,22 @@ def add_turn_edges(graph, node_x_name, node_y_name):
                         turn_types.append("left")
                     else:
                         turn_types.append("straight")
+        
+        all_leg_idx.append([leg.index for leg in legs])
+        all_turn_types.append(turn_types)
+        all_aadt.append(aadt)
+        all_cross_aadt.append([max(aadt) * len(aadt)])
 
-        leg_idxs = [leg.index for leg in legs]
-        graph.es[leg_idxs]["turn_type"] = turn_types
-        graph.es[leg_idxs]["parallel_aadt"] = aadt
-        graph.es[leg_idxs]["cross_aadt"] = max(aadt)
+    # flatten lists
+    all_leg_idx = [item for sublist in all_leg_idx for item in sublist]
+    all_turn_types = [item for sublist in all_turn_types for item in sublist]
+    all_aadt = [item for sublist in all_aadt for item in sublist]
+    all_cross_aadt = [item for sublist in all_cross_aadt for item in sublist]
+
+    # replace edge attributes in graph
+    graph.es[all_leg_idx]["turn_type"] = all_turn_types
+    graph.es[all_leg_idx]["parallel_aadt"] = all_aadt
+    graph.es[all_leg_idx]["cross_aadt"] = all_cross_aadt
 
 
 def explode(graph, nodes):
@@ -315,7 +333,7 @@ class Network:
             if PREPROCESSORS:
                 for func in PREPROCESSORS:
                     self.logger.info(f"running {func.__name__}")
-                    func(self)
+                    func(self, kwargs)
                     self.logger.info("done.")
 
             if graph_file:
@@ -358,13 +376,6 @@ class Network:
 
         # first two link columns need to be from/to nodes and
         # first node column must be node name.
-        # igraph expects vertex ids to be strings
-        self.link_df[[self.link_from_node, self.link_to_node]] = self.link_df[
-            [self.link_from_node, self.link_to_node]
-        ].astype(str)
-
-        self.node_df[self.node_name] = self.node_df[self.node_name].astype(str)
-
         link_cols = list(self.link_df.columns)
         link_cols.insert(0, self.link_to_node)
         link_cols.insert(0, self.link_from_node)
@@ -377,7 +388,7 @@ class Network:
         node_df = self.node_df[node_cols]
 
         self.logger.info("building graph... ")
-        graph = ig.Graph.DataFrame(edges=link_df, vertices=node_df, directed=True)
+        graph = ig.Graph.DataFrame(edges=link_df, vertices=node_df, directed=True, use_vids=False)
 
         self.logger.info("done.")
 
@@ -418,20 +429,20 @@ class Network:
 
         self._graph.es[attr] = weights
 
-    def get_skim_matrix(self, node_ids, cost_attr, max_cost=None):
+    def get_skim_matrix(self, node_ids, cost_attr, truncated=None, max_cost=None):
         """skim network net starting from node_id to node_id, using specified
         edge weights. Zero-out entries above max_cost, return matrix
         """
 
-        weights = self.get_edge_values(cost_attr, dtype=np.float)
+        weights = self.get_edge_values(cost_attr, dtype=np.float32)
         self.set_edge_values(cost_attr, np.nan_to_num(weights))
 
         # remove duplicate node_ids and save reconstruction indices
-        node_ids = np.array(node_ids).astype(np.int)
+        node_ids = np.array(node_ids).astype(np.int64)
         nodes_uniq, node_map = np.unique(node_ids, return_inverse=True)
 
         vertex_names = np.array(self._graph.vs["name"])
-        vertex_names = vertex_names[vertex_names != None].astype(np.int)  # noqa
+        vertex_names = vertex_names[vertex_names != None].astype(np.int64)  # noqa
 
         assert np.isin(nodes_uniq, vertex_names).all(), "graph is missing some nodes"
 
@@ -445,9 +456,15 @@ class Network:
         skim_matrix = np.array(costs)[:, node_map][node_map, :]
 
         if max_cost:
-            skim_matrix[skim_matrix > max_cost] = 0
 
-        return skim_matrix
+            # when geenrating distance skims, create truncated matrix
+            if cost_attr == "distance":
+                truncated = skim_matrix > max_cost
+
+            # otherwise, uss supplied matrix to truncate skims
+            skim_matrix[truncated] = 0
+
+        return skim_matrix.astype(np.float32), truncated # float 32 is precise enough
 
     def get_link_attributes(self, link_attrs):
 
@@ -468,6 +485,6 @@ class Network:
         links_df = links_df[(links_df != 0).any(axis=1)].dropna()
         links_df[[self.link_from_node, self.link_to_node]] = links_df[
             [self.link_from_node, self.link_to_node]
-        ].astype(np.int)
+        ].astype(np.int64)
 
         return links_df.set_index([self.link_from_node, self.link_to_node])

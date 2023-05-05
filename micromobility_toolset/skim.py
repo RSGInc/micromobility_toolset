@@ -205,7 +205,7 @@ class Skim:
     def to_numpy(self):
 
         return self._matrix
-
+    
     def to_dataframe(self):
 
         multi_index = pd.MultiIndex.from_arrays(
@@ -292,6 +292,26 @@ class Skim:
         matrix_df = pd.read_csv(
             csv_file, index_col=[orig_name, dest_name], usecols=None
         )
+
+        return cls(
+            matrix_df,
+            orig_name=orig_name,
+            dest_name=dest_name,
+            core_names=core_names,
+            mapping=mapping,
+        )
+        
+    @classmethod
+    def from_parquet(cls, parquet_file, orig_name, dest_name, core_names=None, mapping=None):
+
+        if core_names:
+            # usecols doesn't include index_col values by default
+            columns = list(core_names) + list([orig_name, dest_name])
+        else:
+            # None will include all columns
+            columns = None
+
+        matrix_df = pd.read_parquet(parquet_file)
 
         return cls(
             matrix_df,

@@ -399,7 +399,7 @@ class Scenario:
         # TODO: convert Nones to nans a bit more gracefully
         zone_nodes = np.array(self.zone_nodes).astype(float)
         graph_nodes = np.searchsorted(
-            np.array(self.network._graph.vs["name"], dtype=np.float), zone_nodes
+            np.array(self.network._graph.vs["name"], dtype=np.float32), zone_nodes
         )
 
         self.network.set_edge_values(load_name, 0)
@@ -441,6 +441,8 @@ class Scenario:
         self.logger.info(f"reading {file_name} ...")
         if file_path.endswith(".csv"):
             skim = Skim.from_csv(file_path, ozone_col, dzone_col, mapping=zones)
+        if file_path.endswith(".parquet"):
+            skim = Skim.from_parquet(file_path, ozone_col, dzone_col, mapping=zones)
 
         else:
             raise TypeError(f"cannot read skim from filetype {file_name}")
@@ -453,8 +455,6 @@ class Scenario:
 
         file_path = self.data_file_path(skim_file)
 
-        ozone_col = self.network_settings.get("skim_ozone_col")
-        dzone_col = self.network_settings.get("skim_dzone_col")
         distance_col = self.network_settings.get("skim_dist_col", "distance")
         max_cost = self.network_settings.get("skim_max_cost")
 
@@ -466,12 +466,11 @@ class Scenario:
 
             # start with distance skim
             self.logger.info(f"skimming {distance_col} skim from network...")
-            matrix = self.network.get_skim_matrix(
+
+            # calculate true distance skims for non-truncated cells
+            matrix, truncated = self.network.get_skim_matrix(
                 node_ids=self.zone_nodes, cost_attr=distance_col, max_cost=max_cost
             )
-
-            ozone_col = self.network_settings.get("skim_ozone_col")
-            dzone_col = self.network_settings.get("skim_dzone_col")
 
             skims = Skim(
                 matrix,
@@ -492,8 +491,9 @@ class Scenario:
                 modified = True
 
                 self.logger.info(f"skimming {cost_attr} skim from network...")
-                matrix = self.network.get_skim_matrix(
-                    node_ids=self.zone_nodes, cost_attr=cost_attr, max_cost=max_cost
+                matrix, truncated = self.network.get_skim_matrix(
+                    node_ids=self.zone_nodes, cost_attr=cost_attr, truncated=truncated, 
+                    max_cost=max_cost
                 )
 
                 skims.add_core(matrix, cost_attr)
@@ -505,7 +505,7 @@ class Scenario:
         if modified:
 
             self.logger.info(f"saving skims to {file_path}...")
-            skims.to_csv(file_path)
+            skims.to_dataframe().to_parquet(file_path)
 
         return skims
 
